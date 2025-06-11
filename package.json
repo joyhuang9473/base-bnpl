@@ -11,6 +11,7 @@
   "dependencies": {
     "@coinbase/onchainkit": "latest",
     "@tanstack/react-query": "^5",
+    "lucide-react": "^0.514.0",
     "next": "15.3.3",
     "react": "^18",
     "react-dom": "^18",

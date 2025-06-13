@@ -1,9 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Avatar, Name, Address } from '@coinbase/onchainkit/identity';
+import { Avatar, Name } from '@coinbase/onchainkit/identity';
 import { ConnectWallet, Wallet, WalletDropdown, WalletDropdownDisconnect } from '@coinbase/onchainkit/wallet';
-import { Transaction, TransactionButton, TransactionStatus } from '@coinbase/onchainkit/transaction';
 import { useAccount } from 'wagmi';
 import Link from 'next/link';
 import { Copy, Check, ExternalLink, ArrowRight, DollarSign, Users, TrendingUp, Zap } from 'lucide-react';
@@ -201,7 +200,7 @@ export default function MerchantsPage() {
                   Register as a Merchant
                 </h2>
                 <p className="text-gray-600">
-                  Join to offer flexible payment options and increase your sales
+                  Join Base-BNPL to offer flexible payment options and increase your sales
                 </p>
               </div>
 
@@ -236,15 +235,12 @@ export default function MerchantsPage() {
                 </div>
               </div>
 
-              <Transaction>
-                <TransactionButton 
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg"
-                  onClick={registerMerchant}
-                >
-                  Register as Merchant
-                </TransactionButton>
-                <TransactionStatus />
-              </Transaction>
+              <button
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg"
+                onClick={registerMerchant}
+              >
+                Register as Merchant
+              </button>
             </div>
           </div>
         ) : (
@@ -253,7 +249,7 @@ export default function MerchantsPage() {
             {/* Page Header */}
             <div className="mb-8">
               <h1 className="text-3xl font-bold text-gray-900">Merchant Dashboard</h1>
-              <p className="text-gray-600">Manage your integration and view analytics</p>
+              <p className="text-gray-600">Manage your Base-BNPL integration and view analytics</p>
             </div>
 
             {/* Navigation Tabs */}
@@ -267,7 +263,7 @@ export default function MerchantsPage() {
                 ].map(({ id, label, icon: Icon }) => (
                   <button
                     key={id}
-                    onClick={() => setActiveTab(id as any)}
+                    onClick={() => setActiveTab(id as 'overview' | 'integration' | 'transactions' | 'analytics')}
                     className={`${
                       activeTab === id
                         ? 'border-blue-500 text-blue-600'
@@ -589,7 +585,7 @@ export default function MerchantsPage() {
                     <TrendingUp className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                     <p className="text-gray-500">Analytics dashboard coming soon</p>
                     <p className="text-sm text-gray-400 mt-2">
-                      We're building advanced analytics to help you understand your BNPL performance
+                      We&apos;re building advanced analytics to help you understand your BNPL performance
                     </p>
                   </div>
                 </div>

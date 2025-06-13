@@ -5,7 +5,6 @@ import { Avatar, Name, Address } from '@coinbase/onchainkit/identity';
 import { ConnectWallet, Wallet, WalletDropdown, WalletDropdownDisconnect } from '@coinbase/onchainkit/wallet';
 import { Transaction, TransactionButton, TransactionStatus, TransactionStatusLabel } from '@coinbase/onchainkit/transaction';
 import { useAccount } from 'wagmi';
-import { parseUnits } from 'viem';
 import { baseSepolia } from 'viem/chains';
 import Link from 'next/link';
 
@@ -113,12 +112,12 @@ export default function DashboardPage() {
   const totalPayments = 8;
 
   // Mock contract calls
-  const makePaymentCalls = (paymentId: number) => {
+  const makePaymentCalls = () => {
     return [
       {
         to: '0x...' as const, // PaymentController address
         data: '0x...' as const, // makePayment function call
-        value: 0n,
+        value: BigInt(0),
       }
     ];
   };
@@ -277,7 +276,7 @@ export default function DashboardPage() {
                             <span className="text-lg font-bold">${payment.amount}</span>
                             <Transaction
                               chainId={baseSepolia.id}
-                              calls={makePaymentCalls(payment.id)}
+                              calls={makePaymentCalls()}
                               isSponsored={true}
                               onSuccess={() => {
                                 console.log('Payment successful');
@@ -404,7 +403,7 @@ export default function DashboardPage() {
                           </div>
                           <Transaction
                             chainId={baseSepolia.id}
-                            calls={makePaymentCalls(loan.id)}
+                            calls={makePaymentCalls()}
                             isSponsored={true}
                           >
                             <TransactionButton 

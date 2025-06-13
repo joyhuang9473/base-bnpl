@@ -6,7 +6,6 @@ import { ConnectWallet, Wallet, WalletDropdown, WalletDropdownDisconnect } from 
 import { Transaction, TransactionButton, TransactionStatus, TransactionStatusLabel } from '@coinbase/onchainkit/transaction';
 import { FundButton } from '@coinbase/onchainkit/fund';
 import { useAccount } from 'wagmi';
-import { parseUnits } from 'viem';
 import { baseSepolia } from 'viem/chains';
 
 interface LendingForm {
@@ -53,7 +52,7 @@ export default function LendPage() {
       {
         to: '0x...' as const, // LendingPool address
         data: '0x...' as const, // deposit function call
-        value: 0n,
+        value: BigInt(0),
       }
     ];
   };
@@ -191,7 +190,7 @@ export default function LendPage() {
                       </label>
                       <select
                         value={form.riskTier}
-                        onChange={(e) => setForm({...form, riskTier: e.target.value as any})}
+                        onChange={(e) => setForm({...form, riskTier: e.target.value as 'LOW' | 'MEDIUM' | 'HIGH' | 'MIXED'})}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       >
                         <option value="LOW">Low Risk (4-6% APY)</option>

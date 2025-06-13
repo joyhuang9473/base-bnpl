@@ -36,10 +36,11 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout(props: { children: ReactNode }) {
+export default async function RootLayout(props: { children: ReactNode }) {
+  const headersList = await headers();
   const initialState = cookieToInitialState(
     getConfig(),
-    headers().get('cookie')
+    headersList.get('cookie')
   );
 
   return (

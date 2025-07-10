@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./interfaces/ILendingPool.sol";
 import "./interfaces/IRiskEngine.sol";
 import "./interfaces/ICollateralManager.sol";
+import "./SharedTypes.sol";
 
 /**
  * @title PaymentController
@@ -17,6 +18,9 @@ import "./interfaces/ICollateralManager.sol";
  */
 contract PaymentController is ReentrancyGuard, AccessControl, Pausable {
     using SafeERC20 for IERC20;
+    using SharedTypes for SharedTypes.RiskTier;
+    using SharedTypes for SharedTypes.LoanStatus;
+    using SharedTypes for SharedTypes.PaymentStatus;
 
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     bytes32 public constant MERCHANT_ROLE = keccak256("MERCHANT_ROLE");
@@ -30,12 +34,12 @@ contract PaymentController is ReentrancyGuard, AccessControl, Pausable {
         uint256 collateralAmount;
         address collateralToken;
         PaymentTerms terms;
-        LoanStatus status;
+        SharedTypes.LoanStatus status;
         uint256 createdAt;
         uint256 nextPaymentDue;
         uint256 paidAmount;
         uint256 remainingAmount;
-        IRiskEngine.RiskTier riskTier;
+        SharedTypes.RiskTier riskTier;
     }
 
     struct PaymentTerms {
@@ -51,7 +55,7 @@ contract PaymentController is ReentrancyGuard, AccessControl, Pausable {
         uint256 amount;
         uint256 dueDate;
         uint256 paidDate;
-        PaymentStatus status;
+        SharedTypes.PaymentStatus status;
         uint256 lateFee;
     }
 
@@ -64,27 +68,11 @@ contract PaymentController is ReentrancyGuard, AccessControl, Pausable {
         uint256 settlementDelay; // seconds before settlement
     }
 
-    enum LoanStatus {
-        PENDING,
-        APPROVED,
-        ACTIVE,
-        COMPLETED,
-        DEFAULTED,
-        LIQUIDATED
-    }
-
-    enum PaymentStatus {
-        PENDING,
-        PAID,
-        LATE,
-        MISSED
-    }
-
     // State variables
     IERC20 public immutable usdcToken;
-    ILendingPool public lendingPool;
-    IRiskEngine public riskEngine;
-    ICollateralManager public collateralManager;
+    ILendingPool public immutable lendingPool;
+    IRiskEngine public immutable riskEngine;
+    ICollateralManager public immutable collateralManager;
 
     uint256 public nextLoanId = 1;
     uint256 public nextPaymentId = 1;
@@ -110,7 +98,7 @@ contract PaymentController is ReentrancyGuard, AccessControl, Pausable {
         address indexed borrower,
         address indexed merchant,
         uint256 amount,
-        IRiskEngine.RiskTier riskTier
+        SharedTypes.RiskTier riskTier
     );
     event LoanApproved(uint256 indexed loanId, uint256 approvedAmount);
     event LoanFunded(uint256 indexed loanId, uint256 fundedAmount);
@@ -168,8 +156,8 @@ contract PaymentController is ReentrancyGuard, AccessControl, Pausable {
         require(principal > 0, "PaymentController: Invalid principal amount");
         require(collateralAmount > 0, "PaymentController: Invalid collateral amount");
         require(merchants[merchant].isActive, "PaymentController: Merchant not active");
-        require(bytes(paymentTemplates[termsTemplate].installments != 0), "PaymentController: Invalid terms template");
-
+        require(paymentTemplates[termsTemplate].installments > 0, "PaymentController: Invalid terms template");
+        
         // Get collateral value
         uint256 collateralValue = collateralManager.getCollateralValue(collateralToken, collateralAmount);
         
@@ -204,7 +192,7 @@ contract PaymentController is ReentrancyGuard, AccessControl, Pausable {
             collateralAmount: collateralAmount,
             collateralToken: collateralToken,
             terms: terms,
-            status: LoanStatus.APPROVED,
+            status: SharedTypes.LoanStatus.APPROVED,
             createdAt: block.timestamp,
             nextPaymentDue: 0,
             paidAmount: 0,
@@ -229,14 +217,14 @@ contract PaymentController is ReentrancyGuard, AccessControl, Pausable {
      */
     function fundLoan(uint256 loanId) external nonReentrant whenNotPaused {
         Loan storage loan = loans[loanId];
-        require(loan.status == LoanStatus.APPROVED, "PaymentController: Loan not approved");
+        require(loan.status == SharedTypes.LoanStatus.APPROVED, "PaymentController: Loan not approved");
         require(loan.borrower != address(0), "PaymentController: Loan does not exist");
 
         // Fund loan from lending pool
         lendingPool.fundLoan(loanId, loan.borrower, loan.principal, loan.riskTier);
 
         // Update loan status
-        loan.status = LoanStatus.ACTIVE;
+        loan.status = SharedTypes.LoanStatus.ACTIVE;
         loan.nextPaymentDue = block.timestamp + (loan.terms.intervalDays * SECONDS_PER_DAY);
 
         // Create payment schedule
@@ -256,9 +244,9 @@ contract PaymentController is ReentrancyGuard, AccessControl, Pausable {
         Payment storage payment = payments[paymentId];
         Loan storage loan = loans[payment.loanId];
         
-        require(payment.status == PaymentStatus.PENDING, "PaymentController: Payment already made");
+        require(payment.status == SharedTypes.PaymentStatus.PENDING, "PaymentController: Payment already made");
         require(loan.borrower == msg.sender, "PaymentController: Not loan borrower");
-        require(loan.status == LoanStatus.ACTIVE, "PaymentController: Loan not active");
+        require(loan.status == SharedTypes.LoanStatus.ACTIVE, "PaymentController: Loan not active");
 
         uint256 totalPayment = payment.amount;
         uint256 lateFee = 0;
@@ -267,9 +255,9 @@ contract PaymentController is ReentrancyGuard, AccessControl, Pausable {
         if (block.timestamp > payment.dueDate + LATE_PAYMENT_GRACE_PERIOD) {
             lateFee = _calculateLateFee(payment.amount, loan.terms.lateFeeRate);
             totalPayment += lateFee;
-            payment.status = PaymentStatus.LATE;
+            payment.status = SharedTypes.PaymentStatus.LATE;
         } else {
-            payment.status = PaymentStatus.PAID;
+            payment.status = SharedTypes.PaymentStatus.PAID;
         }
 
         // Transfer payment from borrower
@@ -298,7 +286,7 @@ contract PaymentController is ReentrancyGuard, AccessControl, Pausable {
         lendingPool.repayLoan(payment.loanId, payment.amount, loan.riskTier);
 
         // Record payment in risk engine
-        bool onTime = payment.status == PaymentStatus.PAID;
+        bool onTime = payment.status == SharedTypes.PaymentStatus.PAID;
         riskEngine.recordPayment(msg.sender, payment.amount, onTime);
 
         // Check if loan is completed
@@ -317,8 +305,8 @@ contract PaymentController is ReentrancyGuard, AccessControl, Pausable {
         Payment storage payment = payments[paymentId];
         Loan storage loan = loans[payment.loanId];
         
-        require(payment.status == PaymentStatus.PENDING, "PaymentController: Payment already processed");
-        require(loan.status == LoanStatus.ACTIVE, "PaymentController: Loan not active");
+        require(payment.status == SharedTypes.PaymentStatus.PENDING, "PaymentController: Payment already processed");
+        require(loan.status == SharedTypes.LoanStatus.ACTIVE, "PaymentController: Loan not active");
 
         // Check if borrower has sufficient balance (simplified check)
         uint256 borrowerBalance = usdcToken.balanceOf(loan.borrower);
@@ -343,7 +331,7 @@ contract PaymentController is ReentrancyGuard, AccessControl, Pausable {
      */
     function liquidateLoan(uint256 loanId) external nonReentrant whenNotPaused {
         Loan storage loan = loans[loanId];
-        require(loan.status == LoanStatus.DEFAULTED, "PaymentController: Loan not in default");
+        require(loan.status == SharedTypes.LoanStatus.DEFAULTED, "PaymentController: Loan not in default");
 
         // Liquidate collateral
         uint256 recoveredAmount = collateralManager.liquidateCollateral(
@@ -359,7 +347,7 @@ contract PaymentController is ReentrancyGuard, AccessControl, Pausable {
         riskEngine.recordDefault(loan.borrower, loan.remainingAmount);
 
         // Update loan status
-        loan.status = LoanStatus.LIQUIDATED;
+        loan.status = SharedTypes.LoanStatus.LIQUIDATED;
 
         emit LoanDefaulted(loanId, loan.remainingAmount);
     }
@@ -438,7 +426,7 @@ contract PaymentController is ReentrancyGuard, AccessControl, Pausable {
         
         for (uint256 i = 0; i < paymentIds.length; i++) {
             Payment memory payment = payments[paymentIds[i]];
-            if (payment.status == PaymentStatus.PENDING) {
+            if (payment.status == SharedTypes.PaymentStatus.PENDING) {
                 return paymentIds[i];
             }
         }
@@ -454,9 +442,9 @@ contract PaymentController is ReentrancyGuard, AccessControl, Pausable {
         for (uint256 i = 0; i < loanIds.length; i++) {
             Loan storage loan = loans[loanIds[i]];
             
-            if (loan.status == LoanStatus.ACTIVE && 
+            if (loan.status == SharedTypes.LoanStatus.ACTIVE && 
                 block.timestamp > loan.nextPaymentDue + DEFAULT_THRESHOLD_DAYS) {
-                loan.status = LoanStatus.DEFAULTED;
+                loan.status = SharedTypes.LoanStatus.DEFAULTED;
                 emit LoanDefaulted(loanIds[i], loan.remainingAmount);
             }
         }
@@ -543,7 +531,7 @@ contract PaymentController is ReentrancyGuard, AccessControl, Pausable {
                 amount: amount,
                 dueDate: dueDate,
                 paidDate: 0,
-                status: PaymentStatus.PENDING,
+                status: SharedTypes.PaymentStatus.PENDING,
                 lateFee: 0
             });
 
@@ -585,7 +573,7 @@ contract PaymentController is ReentrancyGuard, AccessControl, Pausable {
 
         for (uint256 i = 0; i < paymentIds.length; i++) {
             Payment memory payment = payments[paymentIds[i]];
-            if (payment.status == PaymentStatus.PENDING) {
+            if (payment.status == SharedTypes.PaymentStatus.PENDING) {
                 loan.nextPaymentDue = payment.dueDate;
                 break;
             }
@@ -600,7 +588,7 @@ contract PaymentController is ReentrancyGuard, AccessControl, Pausable {
         Payment storage payment = payments[paymentId];
         Loan storage loan = loans[payment.loanId];
 
-        payment.status = PaymentStatus.MISSED;
+        payment.status = SharedTypes.PaymentStatus.MISSED;
 
         // Record missed payment in risk engine
         riskEngine.recordPayment(loan.borrower, payment.amount, false);
@@ -609,7 +597,7 @@ contract PaymentController is ReentrancyGuard, AccessControl, Pausable {
         uint256 missedPayments = _countMissedPayments(payment.loanId);
         if (missedPayments >= 2 || 
             block.timestamp > payment.dueDate + DEFAULT_THRESHOLD_DAYS) {
-            loan.status = LoanStatus.DEFAULTED;
+            loan.status = SharedTypes.LoanStatus.DEFAULTED;
         }
     }
 
@@ -622,7 +610,7 @@ contract PaymentController is ReentrancyGuard, AccessControl, Pausable {
         uint256[] memory paymentIds = loanPayments[loanId];
         
         for (uint256 i = 0; i < paymentIds.length; i++) {
-            if (payments[paymentIds[i]].status == PaymentStatus.MISSED) {
+            if (payments[paymentIds[i]].status == SharedTypes.PaymentStatus.MISSED) {
                 count++;
             }
         }
@@ -635,7 +623,7 @@ contract PaymentController is ReentrancyGuard, AccessControl, Pausable {
     function _completeLoan(uint256 loanId) internal {
         Loan storage loan = loans[loanId];
         
-        loan.status = LoanStatus.COMPLETED;
+        loan.status = SharedTypes.LoanStatus.COMPLETED;
 
         // Release collateral
         collateralManager.releaseCollateral(

@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
@@ -189,8 +189,7 @@ contract CollateralManager is ReentrancyGuard, AccessControl, Pausable {
      * @param amount The token amount
      * @return value The USD value with 8 decimals
      */
-    function getCollateralValue(address token, uint256 amount) external view returns (uint256 value) {
-        require(tokenConfigs[token].isSupported, "CollateralManager: Token not supported");
+    function getCollateralValue(address token, uint256 amount) public view returns (uint256 value) {        require(tokenConfigs[token].isSupported, "CollateralManager: Token not supported");
         
         uint256 tokenPrice = getTokenPrice(token);
         uint256 tokenDecimals = IERC20Metadata(token).decimals();

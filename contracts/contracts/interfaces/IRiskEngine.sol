@@ -1,18 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+import "../SharedTypes.sol";
+
 /**
  * @title IRiskEngine
  * @dev Interface for the Base-BNPL risk assessment engine
  */
 interface IRiskEngine {
-    enum RiskTier {
-        LOW,     // 750+ score, 4-6% APY
-        MEDIUM,  // 600-749 score, 8-12% APY
-        HIGH,    // 300-599 score, 15-25% APY
-        DENIED   // Below 300 or other rejection criteria
-    }
-
     struct CreditProfile {
         uint256 creditScore;
         uint256 totalBorrowed;
@@ -23,12 +18,12 @@ interface IRiskEngine {
         uint256 walletAge;
         uint256 lastAssessment;
         bool hasDefaulted;
-        RiskTier currentTier;
+        SharedTypes.RiskTier currentTier;
     }
 
     struct AssessmentResult {
         uint256 creditScore;
-        RiskTier riskTier;
+        SharedTypes.RiskTier riskTier;
         uint256 maxLoanAmount;
         uint256 requiredCollateral;
         bool approved;
@@ -50,7 +45,7 @@ interface IRiskEngine {
     event CreditAssessed(
         address indexed user,
         uint256 creditScore,
-        RiskTier riskTier,
+        SharedTypes.RiskTier riskTier,
         uint256 maxLoanAmount
     );
     event CreditScoreUpdated(address indexed user, uint256 oldScore, uint256 newScore);
@@ -90,13 +85,13 @@ interface IRiskEngine {
     // View Functions
     function getCreditProfile(address user) external view returns (CreditProfile memory);
     function riskParams() external view returns (RiskParameters memory);
-    function tierMaxAmounts(RiskTier tier) external view returns (uint256);
-    function tierMinScores(RiskTier tier) external view returns (uint256);
+    function tierMaxAmounts(SharedTypes.RiskTier tier) external view returns (uint256);
+    function tierMinScores(SharedTypes.RiskTier tier) external view returns (uint256);
 
     // Admin Functions
     function updateRiskParameters(RiskParameters calldata newParams) external;
     function updateTierConfig(
-        RiskTier tier,
+        SharedTypes.RiskTier tier,
         uint256 minScore,
         uint256 maxAmount
     ) external;

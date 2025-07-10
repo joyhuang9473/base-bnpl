@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "./interfaces/IRiskEngine.sol";
-import "./interfaces/IPaymentController.sol";
-import "./interfaces/ICollateralManager.sol";
+import "./IRiskEngine.sol";
+import "./IPaymentController.sol";
+import "./ICollateralManager.sol";
+import "../SharedTypes.sol";
 
 /**
  * @title LendingPool
@@ -17,6 +18,7 @@ import "./interfaces/ICollateralManager.sol";
  */
 contract LendingPool is ReentrancyGuard, AccessControl, Pausable {
     using SafeERC20 for IERC20;
+    using SharedTypes for SharedTypes.RiskTier;
 
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     bytes32 public constant RISK_MANAGER_ROLE = keccak256("RISK_MANAGER_ROLE");
@@ -26,7 +28,7 @@ contract LendingPool is ReentrancyGuard, AccessControl, Pausable {
         uint256 deposited;
         uint256 yieldEarned;
         uint256 lastUpdateTime;
-        RiskTier riskTier;
+        SharedTypes.RiskTier riskTier;
         bool autoReinvest;
     }
 
@@ -41,12 +43,6 @@ contract LendingPool is ReentrancyGuard, AccessControl, Pausable {
         uint256 totalBorrowers;
     }
 
-    enum RiskTier {
-        LOW,    // 750+ credit score
-        MEDIUM, // 600-749 credit score  
-        HIGH    // 300-599 credit score
-    }
-
     // State variables
     IERC20 public immutable usdcToken;
     IRiskEngine public riskEngine;
@@ -55,8 +51,8 @@ contract LendingPool is ReentrancyGuard, AccessControl, Pausable {
 
     PoolStats public poolStats;
     mapping(address => LenderPosition) public lenderPositions;
-    mapping(RiskTier => uint256) public tierAPY; // APY in basis points
-    mapping(RiskTier => uint256) public tierLiquidity;
+    mapping(SharedTypes.RiskTier => uint256) public tierAPY; // APY in basis points
+    mapping(SharedTypes.RiskTier => uint256) public tierLiquidity;
     
     uint256 public constant RESERVE_RATIO = 200; // 2% reserve fund
     uint256 public constant MAX_UTILIZATION = 9000; // 90% max utilization
@@ -67,13 +63,13 @@ contract LendingPool is ReentrancyGuard, AccessControl, Pausable {
     uint256 private _totalSupply;
 
     // Events
-    event Deposited(address indexed lender, uint256 amount, RiskTier tier);
+    event Deposited(address indexed lender, uint256 amount, SharedTypes.RiskTier tier);
     event Withdrawn(address indexed lender, uint256 amount);
     event YieldDistributed(address indexed lender, uint256 amount);
-    event LoanFunded(uint256 indexed loanId, address indexed borrower, uint256 amount, RiskTier tier);
+    event LoanFunded(uint256 indexed loanId, address indexed borrower, uint256 amount, SharedTypes.RiskTier tier);
     event LoanRepaid(uint256 indexed loanId, uint256 amount);
     event DefaultHandled(uint256 indexed loanId, uint256 lossAmount);
-    event APYUpdated(RiskTier tier, uint256 newAPY);
+    event APYUpdated(SharedTypes.RiskTier tier, uint256 newAPY);
 
     constructor(
         address _usdcToken,
@@ -95,9 +91,9 @@ contract LendingPool is ReentrancyGuard, AccessControl, Pausable {
         _grantRole(ADMIN_ROLE, msg.sender);
         
         // Initialize tier APYs (in basis points)
-        tierAPY[RiskTier.LOW] = 400;    // 4% APY
-        tierAPY[RiskTier.MEDIUM] = 800; // 8% APY  
-        tierAPY[RiskTier.HIGH] = 1500;  // 15% APY
+        tierAPY[SharedTypes.RiskTier.LOW] = 400;    // 4% APY
+        tierAPY[SharedTypes.RiskTier.MEDIUM] = 800; // 8% APY  
+        tierAPY[SharedTypes.RiskTier.HIGH] = 1500;  // 15% APY
     }
 
     /**
@@ -105,7 +101,7 @@ contract LendingPool is ReentrancyGuard, AccessControl, Pausable {
      * @param amount Amount of USDC to deposit
      * @param riskTier Preferred risk tier for allocation
      */
-    function deposit(uint256 amount, RiskTier riskTier) 
+    function deposit(uint256 amount, SharedTypes.RiskTier riskTier) 
         external 
         nonReentrant 
         whenNotPaused 
@@ -208,7 +204,7 @@ contract LendingPool is ReentrancyGuard, AccessControl, Pausable {
         uint256 loanId,
         address borrower,
         uint256 amount,
-        RiskTier riskTier
+        SharedTypes.RiskTier riskTier
     ) external onlyRole(PAYMENT_CONTROLLER_ROLE) nonReentrant {
         require(amount > 0, "LendingPool: Invalid amount");
         require(borrower != address(0), "LendingPool: Invalid borrower");
@@ -235,7 +231,7 @@ contract LendingPool is ReentrancyGuard, AccessControl, Pausable {
     function repayLoan(
         uint256 loanId,
         uint256 amount,
-        RiskTier riskTier
+        SharedTypes.RiskTier riskTier
     ) external onlyRole(PAYMENT_CONTROLLER_ROLE) nonReentrant {
         require(amount > 0, "LendingPool: Invalid amount");
         
@@ -291,7 +287,7 @@ contract LendingPool is ReentrancyGuard, AccessControl, Pausable {
      * @param tier Risk tier to update
      * @param newAPY New APY in basis points
      */
-    function updateTierAPY(RiskTier tier, uint256 newAPY) 
+    function updateTierAPY(SharedTypes.RiskTier tier, uint256 newAPY) 
         external 
         onlyRole(ADMIN_ROLE) 
     {
@@ -341,7 +337,7 @@ contract LendingPool is ReentrancyGuard, AccessControl, Pausable {
         uint256 totalLiquidity = 0;
         
         for (uint256 i = 0; i < 3; i++) {
-            RiskTier tier = RiskTier(i);
+            SharedTypes.RiskTier tier = SharedTypes.RiskTier(i);
             uint256 tierLiq = tierLiquidity[tier];
             if (tierLiq > 0) {
                 totalWeightedAPY += tierAPY[tier] * tierLiq;
@@ -420,7 +416,7 @@ contract LendingPool is ReentrancyGuard, AccessControl, Pausable {
      * @param totalYield Total yield to distribute
      * @param riskTier Risk tier of the generating loan
      */
-    function _distributeYield(uint256 totalYield, RiskTier riskTier) internal {
+    function _distributeYield(uint256 totalYield, SharedTypes.RiskTier riskTier) internal {
         uint256 tierLiq = tierLiquidity[riskTier];
         
         if (tierLiq == 0) return;
@@ -454,4 +450,26 @@ contract LendingPool is ReentrancyGuard, AccessControl, Pausable {
         
         return maxLoaned - poolStats.totalLoaned;
     }
+}
+
+
+interface ILendingPool {
+    function fundLoan(
+        uint256 loanId,
+        address borrower,
+        uint256 amount,
+        SharedTypes.RiskTier riskTier
+    ) external;
+
+    function repayLoan(
+        uint256 loanId,
+        uint256 amount,
+        SharedTypes.RiskTier riskTier
+    ) external;
+
+    function handleDefault(
+        uint256 loanId,
+        uint256 outstandingAmount,
+        uint256 recoveredAmount
+    ) external;
 }

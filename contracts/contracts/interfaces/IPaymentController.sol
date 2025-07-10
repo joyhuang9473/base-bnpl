@@ -1,28 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "./IRiskEngine.sol";
+import "../SharedTypes.sol";
 
 /**
  * @title IPaymentController
  * @dev Interface for the Base-BNPL payment controller
  */
 interface IPaymentController {
-    enum LoanStatus {
-        PENDING,
-        APPROVED,
-        ACTIVE,
-        COMPLETED,
-        DEFAULTED,
-        LIQUIDATED
-    }
-
-    enum PaymentStatus {
-        PENDING,
-        PAID,
-        LATE,
-        MISSED
-    }
 
     struct Loan {
         uint256 id;
@@ -33,12 +18,12 @@ interface IPaymentController {
         uint256 collateralAmount;
         address collateralToken;
         PaymentTerms terms;
-        LoanStatus status;
+        SharedTypes.LoanStatus status;
         uint256 createdAt;
         uint256 nextPaymentDue;
         uint256 paidAmount;
         uint256 remainingAmount;
-        IRiskEngine.RiskTier riskTier;
+        SharedTypes.RiskTier riskTier;
     }
 
     struct PaymentTerms {
@@ -54,7 +39,7 @@ interface IPaymentController {
         uint256 amount;
         uint256 dueDate;
         uint256 paidDate;
-        PaymentStatus status;
+        SharedTypes.PaymentStatus status;
         uint256 lateFee;
     }
 
@@ -73,7 +58,7 @@ interface IPaymentController {
         address indexed borrower,
         address indexed merchant,
         uint256 amount,
-        IRiskEngine.RiskTier riskTier
+        SharedTypes.RiskTier riskTier
     );
     event LoanApproved(uint256 indexed loanId, uint256 approvedAmount);
     event LoanFunded(uint256 indexed loanId, uint256 fundedAmount);

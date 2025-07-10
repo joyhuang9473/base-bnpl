@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
 import "./interfaces/ILendingPool.sol";
+import "./SharedTypes.sol";
 
 /**
  * @title RiskEngine
@@ -12,6 +13,8 @@ import "./interfaces/ILendingPool.sol";
  * Calculates credit scores based on wallet history, collateral, and other factors
  */
 contract RiskEngine is AccessControl, ReentrancyGuard, Pausable {
+    using SharedTypes for SharedTypes.RiskTier;
+
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     bytes32 public constant RISK_ASSESSOR_ROLE = keccak256("RISK_ASSESSOR_ROLE");
     bytes32 public constant PAYMENT_CONTROLLER_ROLE = keccak256("PAYMENT_CONTROLLER_ROLE");
@@ -26,7 +29,7 @@ contract RiskEngine is AccessControl, ReentrancyGuard, Pausable {
         uint256 walletAge;            // Age of wallet in days
         uint256 lastAssessment;       // Timestamp of last assessment
         bool hasDefaulted;            // Has ever defaulted
-        RiskTier currentTier;         // Current risk tier
+        SharedTypes.RiskTier currentTier;         // Current risk tier
     }
 
     struct RiskParameters {
@@ -42,18 +45,11 @@ contract RiskEngine is AccessControl, ReentrancyGuard, Pausable {
 
     struct AssessmentResult {
         uint256 creditScore;
-        RiskTier riskTier;
+        SharedTypes.RiskTier riskTier;
         uint256 maxLoanAmount;
         uint256 requiredCollateral;
         bool approved;
         string reason;
-    }
-
-    enum RiskTier {
-        LOW,     // 750+ score, 4-6% APY
-        MEDIUM,  // 600-749 score, 8-12% APY
-        HIGH,    // 300-599 score, 15-25% APY
-        DENIED   // Below 300 or other rejection criteria
     }
 
     // State variables
@@ -61,8 +57,8 @@ contract RiskEngine is AccessControl, ReentrancyGuard, Pausable {
     RiskParameters public riskParams;
     
     mapping(address => CreditProfile) public creditProfiles;
-    mapping(RiskTier => uint256) public tierMaxAmounts;
-    mapping(RiskTier => uint256) public tierMinScores;
+    mapping(SharedTypes.RiskTier => uint256) public tierMaxAmounts;
+    mapping(SharedTypes.RiskTier => uint256) public tierMinScores;
     
     uint256 public constant SCORE_SCALE = 850;
     uint256 public constant MIN_SCORE = 300;
@@ -73,7 +69,7 @@ contract RiskEngine is AccessControl, ReentrancyGuard, Pausable {
     event CreditAssessed(
         address indexed user,
         uint256 creditScore,
-        RiskTier riskTier,
+        SharedTypes.RiskTier riskTier,
         uint256 maxLoanAmount
     );
     event CreditScoreUpdated(address indexed user, uint256 oldScore, uint256 newScore);
@@ -102,16 +98,16 @@ contract RiskEngine is AccessControl, ReentrancyGuard, Pausable {
         });
         
         // Initialize tier configurations
-        tierMinScores[RiskTier.LOW] = 750;
-        tierMinScores[RiskTier.MEDIUM] = 600;
-        tierMinScores[RiskTier.HIGH] = 300;
-        tierMinScores[RiskTier.DENIED] = 0;
+        tierMinScores[SharedTypes.RiskTier.LOW] = 750;
+        tierMinScores[SharedTypes.RiskTier.MEDIUM] = 600;
+        tierMinScores[SharedTypes.RiskTier.HIGH] = 300;
+        tierMinScores[SharedTypes.RiskTier.DENIED] = 0;
         
         // Maximum loan amounts per tier (in USDC, 6 decimals)
-        tierMaxAmounts[RiskTier.LOW] = 10000 * 1e6;     // $10,000
-        tierMaxAmounts[RiskTier.MEDIUM] = 5000 * 1e6;   // $5,000
-        tierMaxAmounts[RiskTier.HIGH] = 2000 * 1e6;     // $2,000
-        tierMaxAmounts[RiskTier.DENIED] = 0;
+        tierMaxAmounts[SharedTypes.RiskTier.LOW] = 10000 * 1e6;     // $10,000
+        tierMaxAmounts[SharedTypes.RiskTier.MEDIUM] = 5000 * 1e6;   // $5,000
+        tierMaxAmounts[SharedTypes.RiskTier.HIGH] = 2000 * 1e6;     // $2,000
+        tierMaxAmounts[SharedTypes.RiskTier.DENIED] = 0;
     }
 
     /**
@@ -136,17 +132,17 @@ contract RiskEngine is AccessControl, ReentrancyGuard, Pausable {
         uint256 creditScore = _calculateCreditScore(borrower, collateralValue, requestedAmount);
         
         // Determine risk tier
-        RiskTier riskTier = _getRiskTier(creditScore);
+        SharedTypes.RiskTier riskTier = _getRiskTier(creditScore);
         
         // Check if loan is approvable
         bool approved = true;
         string memory reason = "";
         
         // Check credit score threshold
-        if (creditScore < tierMinScores[RiskTier.HIGH]) {
+        if (creditScore < tierMinScores[SharedTypes.RiskTier.HIGH]) {
             approved = false;
             reason = "Credit score too low";
-            riskTier = RiskTier.DENIED;
+            riskTier = SharedTypes.RiskTier.DENIED;
         }
         
         // Check loan amount limits
@@ -331,7 +327,7 @@ contract RiskEngine is AccessControl, ReentrancyGuard, Pausable {
      * @param maxAmount Maximum loan amount for tier
      */
     function updateTierConfig(
-        RiskTier tier,
+        SharedTypes.RiskTier tier,
         uint256 minScore,
         uint256 maxAmount
     ) external onlyRole(ADMIN_ROLE) {
@@ -502,15 +498,15 @@ contract RiskEngine is AccessControl, ReentrancyGuard, Pausable {
      * @param creditScore The credit score
      * @return tier The risk tier
      */
-    function _getRiskTier(uint256 creditScore) internal view returns (RiskTier tier) {
-        if (creditScore >= tierMinScores[RiskTier.LOW]) {
-            return RiskTier.LOW;
-        } else if (creditScore >= tierMinScores[RiskTier.MEDIUM]) {
-            return RiskTier.MEDIUM;
-        } else if (creditScore >= tierMinScores[RiskTier.HIGH]) {
-            return RiskTier.HIGH;
+    function _getRiskTier(uint256 creditScore) internal view returns (SharedTypes.RiskTier tier) {
+        if (creditScore >= tierMinScores[SharedTypes.RiskTier.LOW]) {
+            return SharedTypes.RiskTier.LOW;
+        } else if (creditScore >= tierMinScores[SharedTypes.RiskTier.MEDIUM]) {
+            return SharedTypes.RiskTier.MEDIUM;
+        } else if (creditScore >= tierMinScores[SharedTypes.RiskTier.HIGH]) {
+            return SharedTypes.RiskTier.HIGH;
         } else {
-            return RiskTier.DENIED;
+            return SharedTypes.RiskTier.DENIED;
         }
     }
 

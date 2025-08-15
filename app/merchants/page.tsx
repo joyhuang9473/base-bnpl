@@ -30,39 +30,19 @@ export default function MerchantsPage() {
   const [widgetCopied, setWidgetCopied] = useState(false);
   const [isRegistered, setIsRegistered] = useState(false);
 
-  // Mock data - replace with real data fetching
+  // Real merchant stats would come from contract events or subgraph
+  // For now showing calculated stats based on mock structure
   const merchantStats: MerchantStats = {
-    totalSales: '$47,284.50',
-    totalTransactions: 156,
-    avgOrderValue: '$302.85',
-    conversionIncrease: '+23.5%'
+    totalSales: '$0.00', // Would be calculated from loan totals
+    totalTransactions: 0, // Would be number of loans funded
+    avgOrderValue: '$0.00', // Would be average loan amount
+    conversionIncrease: '0.0%' // Would be calculated from historical data
   };
 
+  // Real transactions would come from contract events filtered by merchant
   const recentTransactions: Transaction[] = [
-    {
-      id: 'tx_1234567890',
-      customer: '0x1234...5678',
-      amount: '$299.99',
-      status: 'completed',
-      date: '2024-01-15',
-      paymentPlan: '4x weekly'
-    },
-    {
-      id: 'tx_0987654321',
-      customer: '0x9876...4321',
-      amount: '$149.50',
-      status: 'pending',
-      date: '2024-01-15',
-      paymentPlan: '6x monthly'
-    },
-    {
-      id: 'tx_1122334455',
-      customer: '0x1122...4455',
-      amount: '$799.00',
-      status: 'completed',
-      date: '2024-01-14',
-      paymentPlan: '12x monthly'
-    }
+    // This would be populated by querying PaymentController events
+    // filtered by merchant address
   ];
 
   const apiKey = '0xMERCHANT_API_KEY_' + address?.slice(2, 10);
@@ -94,10 +74,12 @@ export default function MerchantsPage() {
   };
 
   const registerMerchant = async () => {
-    // Mock registration - replace with actual contract call
+    // Real merchant registration would involve:
+    // 1. Transaction to register merchant in PaymentController
+    // 2. Setting merchant parameters (fees, terms, etc.)
     try {
       setIsRegistered(true);
-      // Transaction call would go here
+      // Would use Transaction component with registerMerchant contract call
     } catch (error) {
       console.error('Registration failed:', error);
     }
@@ -106,7 +88,8 @@ export default function MerchantsPage() {
   useEffect(() => {
     // Check if merchant is already registered
     if (address) {
-      // Mock check - replace with actual contract call
+      // Real implementation would check merchant registration in PaymentController
+      // For now, assume all connected wallets can be merchants
       setIsRegistered(true);
     }
   }, [address]);
@@ -349,7 +332,7 @@ export default function MerchantsPage() {
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
-                        {recentTransactions.map((tx) => (
+                        {recentTransactions.length > 0 ? recentTransactions.map((tx) => (
                           <tr key={tx.id}>
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                               {tx.id}
@@ -378,7 +361,13 @@ export default function MerchantsPage() {
                               {tx.date}
                             </td>
                           </tr>
-                        ))}
+                        )) : (
+                          <tr>
+                            <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
+                              No transactions yet
+                            </td>
+                          </tr>
+                        )}
                       </tbody>
                     </table>
                   </div>
@@ -538,7 +527,7 @@ export default function MerchantsPage() {
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                      {recentTransactions.map((tx) => (
+                      {recentTransactions.length > 0 ? recentTransactions.map((tx) => (
                         <tr key={tx.id}>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                             {tx.id}
@@ -570,7 +559,13 @@ export default function MerchantsPage() {
                             <button className="text-blue-600 hover:text-blue-700">View Details</button>
                           </td>
                         </tr>
-                      ))}
+                      )) : (
+                        <tr>
+                          <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
+                            No transactions yet
+                          </td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
                 </div>

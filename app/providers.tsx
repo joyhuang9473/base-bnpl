@@ -19,22 +19,7 @@ export function Providers(props: {
       <QueryClientProvider client={queryClient}>
         <OnchainKitProvider
           apiKey={process.env.NEXT_PUBLIC_ONCHAINKIT_API_KEY}
-          projectId={process.env.NEXT_PUBLIC_CDP_PROJECT_ID}
           chain={process.env.NODE_ENV === 'development' ? baseSepolia : base}
-          config={{
-            appearance: {
-              name: 'Base-BNPL',
-              logo: '/logo.png',
-              mode: 'auto',
-              theme: 'default',
-            },
-            wallet: {
-              display: 'modal',
-              termsUrl: 'https://base-bnpl.xyz/terms',
-              privacyUrl: 'https://base-bnpl.xyz/privacy',
-            },
-            paymaster: process.env.NEXT_PUBLIC_PAYMASTER_ENDPOINT,
-          }}
         >
           {props.children}
         </OnchainKitProvider>

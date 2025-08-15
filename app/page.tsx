@@ -11,29 +11,29 @@ export default function HomePage() {
   const router = useRouter();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white">
+    <div className="min-h-screen bg-neutral-50">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b">
+      <header className="bg-white border-b border-neutral-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
-              <h1 className="text-2xl font-bold text-blue-600">Base-BNPL</h1>
+              <h1 className="text-2xl font-bold text-primary-600">Base BNPL</h1>
             </div>
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-6">
               <nav className="hidden md:flex space-x-8">
-                <Link href="/borrow" className="text-gray-600 hover:text-blue-600">
+                <Link href="/borrow" className="text-neutral-600 hover:text-primary-600 font-medium transition-colors">
                   Borrow
                 </Link>
-                <Link href="/lend" className="text-gray-600 hover:text-blue-600">
+                <Link href="/lend" className="text-neutral-600 hover:text-primary-600 font-medium transition-colors">
                   Lend
                 </Link>
-                <Link href="/merchants" className="text-gray-600 hover:text-blue-600">
-                  Merchants
+                <Link href="/dashboard" className="text-neutral-600 hover:text-primary-600 font-medium transition-colors">
+                  Dashboard
                 </Link>
               </nav>
               <Wallet>
-                <ConnectWallet>
-                  <Avatar className="h-6 w-6" />
+                <ConnectWallet className="btn-primary">
+                  <Avatar className="h-4 w-4" />
                   <Name />
                 </ConnectWallet>
                 <WalletDropdown>
@@ -46,140 +46,101 @@ export default function HomePage() {
       </header>
 
       {/* Hero Section */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="text-center">
-          <h1 className="text-4xl font-extrabold text-gray-900 sm:text-5xl md:text-6xl">
-            <span className="block">Buy Now, Pay Later</span>
-            <span className="block text-blue-600">On-Chain</span>
+          <h1 className="text-5xl font-bold text-neutral-900 sm:text-6xl lg:text-7xl">
+            <span className="block">Buy now,</span>
+            <span className="block text-primary-600">pay later</span>
           </h1>
-          <p className="mt-3 max-w-md mx-auto text-base text-gray-500 sm:text-lg md:mt-5 md:text-xl md:max-w-3xl">
-            The first decentralized BNPL platform built on Base. Transparent terms, instant approvals, and crypto-native payments.
+          <p className="mt-6 max-w-2xl mx-auto text-xl text-neutral-600 leading-relaxed">
+            The first decentralized BNPL platform on Base. Transparent, secure, and designed for the future of finance.
           </p>
           
           {address ? (
-            <div className="mt-5 max-w-md mx-auto sm:flex sm:justify-center md:mt-8">
-              <div className="rounded-md shadow">
-                <button
-                  onClick={() => router.push('/borrow')}
-                  className="w-full flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 md:py-4 md:text-lg md:px-10"
-                >
-                  Start Borrowing
-                </button>
-              </div>
-              <div className="mt-3 rounded-md shadow sm:mt-0 sm:ml-3">
-                <button
-                  onClick={() => router.push('/lend')}
-                  className="w-full flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-blue-600 bg-white hover:bg-gray-50 md:py-4 md:text-lg md:px-10"
-                >
-                  Start Lending
-                </button>
-              </div>
+            <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
+              <button
+                onClick={() => router.push('/borrow')}
+                className="btn-primary px-8 py-4 text-lg"
+              >
+                Start borrowing
+              </button>
+              <button
+                onClick={() => router.push('/lend')}
+                className="btn-secondary px-8 py-4 text-lg"
+              >
+                Start earning
+              </button>
             </div>
           ) : (
-            <div className="mt-5 max-w-md mx-auto sm:flex sm:justify-center md:mt-8">
-              <div className="rounded-md shadow">
-                <Wallet>
-                  <ConnectWallet className="w-full flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 md:py-4 md:text-lg md:px-10">
-                    Connect Wallet to Get Started
-                  </ConnectWallet>
-                </Wallet>
-              </div>
+            <div className="mt-10">
+              <Wallet>
+                <ConnectWallet className="btn-primary px-8 py-4 text-lg">
+                  Connect wallet to get started
+                </ConnectWallet>
+              </Wallet>
             </div>
           )}
         </div>
 
         {/* Features */}
-        <div className="mt-20">
-          <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
-            <div className="pt-6">
-              <div className="flow-root bg-white rounded-lg px-6 pb-8">
-                <div className="-mt-6">
-                  <div>
-                    <span className="inline-flex items-center justify-center p-3 bg-blue-500 rounded-md shadow-lg">
-                      <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                      </svg>
-                    </span>
-                  </div>
-                  <h3 className="mt-8 text-lg font-medium text-gray-900 tracking-tight">Instant Approvals</h3>
-                  <p className="mt-5 text-base text-gray-500">
-                    Get approved in seconds with our on-chain credit scoring algorithm
-                  </p>
-                </div>
-              </div>
+        <div className="mt-24">
+          <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
+            <div className="card p-8">
+              <h3 className="text-xl font-semibold text-neutral-900 mb-4">Instant approvals</h3>
+              <p className="text-neutral-600 leading-relaxed">
+                Get approved in seconds with our on-chain credit scoring and automated risk assessment system.
+              </p>
             </div>
 
-            <div className="pt-6">
-              <div className="flow-root bg-white rounded-lg px-6 pb-8">
-                <div className="-mt-6">
-                  <div>
-                    <span className="inline-flex items-center justify-center p-3 bg-blue-500 rounded-md shadow-lg">
-                      <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                    </span>
-                  </div>
-                  <h3 className="mt-8 text-lg font-medium text-gray-900 tracking-tight">Transparent Terms</h3>
-                  <p className="mt-5 text-base text-gray-500">
-                    All fees and terms are visible on-chain. No hidden charges.
-                  </p>
-                </div>
-              </div>
+            <div className="card p-8">
+              <h3 className="text-xl font-semibold text-neutral-900 mb-4">Transparent terms</h3>
+              <p className="text-neutral-600 leading-relaxed">
+                All fees, rates, and terms are visible on-chain with complete transparency and no hidden charges.
+              </p>
             </div>
 
-            <div className="pt-6">
-              <div className="flow-root bg-white rounded-lg px-6 pb-8">
-                <div className="-mt-6">
-                  <div>
-                    <span className="inline-flex items-center justify-center p-3 bg-blue-500 rounded-md shadow-lg">
-                      <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-                      </svg>
-                    </span>
-                  </div>
-                  <h3 className="mt-8 text-lg font-medium text-gray-900 tracking-tight">Earn Yield</h3>
-                  <p className="mt-5 text-base text-gray-500">
-                    Lenders earn competitive yields by funding consumer purchases
-                  </p>
-                </div>
-              </div>
+            <div className="card p-8">
+              <h3 className="text-xl font-semibold text-neutral-900 mb-4">Competitive yields</h3>
+              <p className="text-neutral-600 leading-relaxed">
+                Lenders earn attractive returns by providing liquidity to fund consumer purchases with built-in risk management.
+              </p>
             </div>
           </div>
         </div>
 
         {/* Stats */}
-        <div className="mt-20 bg-white rounded-lg shadow">
-          <div className="max-w-7xl mx-auto py-12 px-4 sm:py-16 sm:px-6 lg:px-8 lg:py-20">
-            <div className="max-w-4xl mx-auto text-center">
-              <h2 className="text-3xl font-extrabold text-gray-900">
-                Built for the Future of Finance
+        <div className="mt-24">
+          <div className="card p-12">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl font-bold text-neutral-900 mb-4">
+                Built on Base blockchain
               </h2>
-              <p className="mt-3 text-xl text-gray-500 sm:mt-4">
-                Powered by Base blockchain and OnchainKit
+              <p className="text-xl text-neutral-600">
+                Powered by smart contracts and onchain transparency
               </p>
             </div>
-            <dl className="mt-10 text-center sm:max-w-3xl sm:mx-auto sm:grid sm:grid-cols-3 sm:gap-8">
-              <div className="flex flex-col">
-                <dt className="order-2 mt-2 text-lg leading-6 font-medium text-gray-500">
-                  Average APY for Lenders
+            <dl className="grid grid-cols-1 gap-8 sm:grid-cols-3">
+              <div className="text-center">
+                <dt className="text-sm font-medium text-neutral-500 mb-2">
+                  Lender APY
                 </dt>
-                <dd className="order-1 text-5xl font-extrabold text-blue-600">
+                <dd className="text-4xl font-bold text-primary-600">
                   8-15%
                 </dd>
               </div>
-              <div className="flex flex-col mt-10 sm:mt-0">
-                <dt className="order-2 mt-2 text-lg leading-6 font-medium text-gray-500">
-                  Seconds to Approval
+              <div className="text-center">
+                <dt className="text-sm font-medium text-neutral-500 mb-2">
+                  Approval time
                 </dt>
-                <dd className="order-1 text-5xl font-extrabold text-blue-600">
-                  &lt;30
+                <dd className="text-4xl font-bold text-primary-600">
+                  &lt;30s
                 </dd>
               </div>
-              <div className="flex flex-col mt-10 sm:mt-0">
-                <dt className="order-2 mt-2 text-lg leading-6 font-medium text-gray-500">
-                  Default Rate
+              <div className="text-center">
+                <dt className="text-sm font-medium text-neutral-500 mb-2">
+                  Default rate
                 </dt>
-                <dd className="order-1 text-5xl font-extrabold text-blue-600">
+                <dd className="text-4xl font-bold text-primary-600">
                   &lt;5%
                 </dd>
               </div>

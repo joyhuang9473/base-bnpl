@@ -1,4 +1,4 @@
-import { http, cookieStorage, createConfig, createStorage } from 'wagmi';
+import { http, cookieStorage, createConfig, createStorage, fallback } from 'wagmi';
 import { base, baseSepolia } from 'wagmi/chains';
 import { coinbaseWallet, metaMask, walletConnect } from 'wagmi/connectors';
 
@@ -8,21 +8,31 @@ export function getConfig() {
     connectors: [
       coinbaseWallet({
         appName: 'Base-BNPL',
-        preference: 'smartWalletOnly',
+        preference: 'all',
         version: '4',
       }),
       metaMask(),
-      walletConnect({
-        projectId: process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID!,
-      }),
+      ...(process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID ? [
+        walletConnect({
+          projectId: process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID,
+        })
+      ] : []),
     ],
     storage: createStorage({
       storage: cookieStorage,
     }),
     ssr: true,
     transports: {
-      [base.id]: http(),
-      [baseSepolia.id]: http(),
+      [base.id]: fallback([
+        http('https://mainnet.base.org'),
+        http('https://base-rpc.publicnode.com'),
+        http('https://base.meowrpc.com'),
+      ]),
+      [baseSepolia.id]: fallback([
+        http('https://sepolia.base.org'),
+        http('https://base-sepolia-rpc.publicnode.com'),
+        http('https://base-sepolia.blockpi.network/v1/rpc/public'),
+      ]),
     },
   });
 }

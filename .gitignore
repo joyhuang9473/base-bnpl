@@ -14,10 +14,12 @@ node_modules/
 
 # production
 /build
+
+# Hardhat artifacts
 artifacts/
 cache/
 deployments/
-scripts/
+typechain-types/
 
 # misc
 .DS_Store
@@ -28,9 +30,30 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# local env files
+# Environment files (sensitive data)
 .env*.local
 .env
+.env.production
+.env.development
+.env.staging
+
+# Private keys and sensitive files
+*.pem
+*.key
+*.p12
+*.pfx
+mnemonic.txt
+seed.txt
+private-key*
+wallet*
+secrets*
+
+# IDE and editor files
+.claude
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
 
 # vercel
 .vercel

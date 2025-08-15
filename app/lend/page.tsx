@@ -1,16 +1,16 @@
 'use client';
 
 import { useState } from 'react';
-import { Avatar, Name, Address, EthBalance } from '@coinbase/onchainkit/identity';
+import { Avatar, Name } from '@coinbase/onchainkit/identity';
 import { ConnectWallet, Wallet, WalletDropdown, WalletDropdownDisconnect } from '@coinbase/onchainkit/wallet';
-import { Transaction, TransactionButton, TransactionStatus, TransactionStatusLabel } from '@coinbase/onchainkit/transaction';
-import { FundButton } from '@coinbase/onchainkit/fund';
-import { useAccount } from 'wagmi';
-import { baseSepolia } from 'viem/chains';
+import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi';
+import { parseUnits, formatUnits } from 'viem';
+import Link from 'next/link';
+import { CONTRACT_ADDRESSES, LENDING_POOL_ABI, ERC20_ABI } from '../../lib/contracts';
 
 interface LendingForm {
   amount: string;
-  riskTier: 'LOW' | 'MEDIUM' | 'HIGH' | 'MIXED';
+  riskTier: 0 | 1 | 2; // LOW, MEDIUM, HIGH
   autoReinvest: boolean;
 }
 
@@ -18,60 +18,106 @@ export default function LendPage() {
   const { address } = useAccount();
   const [form, setForm] = useState<LendingForm>({
     amount: '',
-    riskTier: 'LOW',
+    riskTier: 0, // LOW
     autoReinvest: false
   });
   const [activeTab, setActiveTab] = useState<'deposit' | 'portfolio'>('deposit');
+  const [step, setStep] = useState<'input' | 'approve' | 'deposit' | 'success'>('input');
 
-  // Mock data
-  const portfolioData = {
-    totalDeposited: 5000,
-    currentBalance: 5425,
-    totalEarned: 425,
-    apy: 8.5,
-    positions: [
-      { tier: 'LOW', amount: 2000, apy: 6.0, earned: 120 },
-      { tier: 'MEDIUM', amount: 2000, apy: 10.0, earned: 200 },
-      { tier: 'HIGH', amount: 1000, apy: 15.0, earned: 105 },
-    ]
-  };
+  const { writeContract: writeApproval, data: approvalHash, isPending: isApprovePending } = useWriteContract();
+  const { writeContract: writeDeposit, data: depositHash, isPending: isDepositPending } = useWriteContract();
+  
+  const { isLoading: isApprovalConfirming } = useWaitForTransactionReceipt({ hash: approvalHash });
+  const { isLoading: isDepositConfirming } = useWaitForTransactionReceipt({ hash: depositHash });
 
-  const poolStats = {
-    totalLiquidity: 2500000,
-    totalLoaned: 1750000,
-    utilizationRate: 70,
-    totalLenders: 156,
-    averageAPY: 9.2
-  };
+  // Read real contract data
+  const { data: usdcBalance } = useReadContract({
+    address: CONTRACT_ADDRESSES.USDC,
+    abi: ERC20_ABI,
+    functionName: 'balanceOf',
+    args: [address],
+  });
 
-  // Mock contract calls for demo
-  const depositCalls = () => {
-    if (!form.amount) return [];
+  const { data: poolStats } = useReadContract({
+    address: CONTRACT_ADDRESSES.LENDING_POOL,
+    abi: LENDING_POOL_ABI,
+    functionName: 'getPoolStats',
+  });
+
+  const { data: lenderPosition } = useReadContract({
+    address: CONTRACT_ADDRESSES.LENDING_POOL,
+    abi: LENDING_POOL_ABI,
+    functionName: 'getLenderPosition',
+    args: [address],
+  });
+
+  const handleApproval = () => {
+    if (!form.amount) return;
+    const amountInWei = parseUnits(form.amount, 6);
     
-    return [
-      {
-        to: '0x...' as const, // LendingPool address
-        data: '0x...' as const, // deposit function call
-        value: BigInt(0),
-      }
-    ];
+    writeApproval({
+      address: CONTRACT_ADDRESSES.USDC,
+      abi: ERC20_ABI,
+      functionName: 'approve',
+      args: [CONTRACT_ADDRESSES.LENDING_POOL, amountInWei]
+    });
   };
 
-  const riskTierInfo = {
-    LOW: { apy: '4-6%', risk: 'Low', description: 'Conservative loans with high collateral ratios' },
-    MEDIUM: { apy: '8-12%', risk: 'Medium', description: 'Balanced risk-return profile' },
-    HIGH: { apy: '15-25%', risk: 'High', description: 'Higher yields with increased risk' },
-    MIXED: { apy: '8-15%', risk: 'Diversified', description: 'Automatically balanced across all tiers' }
+  const handleDeposit = () => {
+    if (!form.amount) return;
+    const amountInWei = parseUnits(form.amount, 6);
+    
+    writeDeposit({
+      address: CONTRACT_ADDRESSES.LENDING_POOL,
+      abi: LENDING_POOL_ABI,
+      functionName: 'deposit',
+      args: [amountInWei, form.riskTier]
+    });
   };
+
+  // Auto-advance steps
+  if (approvalHash && !isApprovalConfirming && step === 'approve') {
+    setStep('deposit');
+  }
+  if (depositHash && !isDepositConfirming && step === 'deposit') {
+    setStep('success');
+  }
+
+  const formatPoolStats = () => {
+    if (!poolStats) return null;
+    
+    return {
+      totalLiquidity: Number(formatUnits(poolStats[0], 6)),
+      totalLoaned: Number(formatUnits(poolStats[1], 6)),
+      utilizationRate: Number(poolStats[4]) / 100,
+      averageAPY: Number(poolStats[5]) / 100,
+      totalLenders: Number(poolStats[6]),
+      totalBorrowers: Number(poolStats[7])
+    };
+  };
+
+  const formatLenderPosition = () => {
+    if (!lenderPosition) return null;
+    
+    return {
+      deposited: Number(formatUnits(lenderPosition[0], 6)),
+      yieldEarned: Number(formatUnits(lenderPosition[1], 6)),
+      riskTier: Number(lenderPosition[3]),
+      autoReinvest: lenderPosition[4]
+    };
+  };
+
+  const formattedStats = formatPoolStats();
+  const position = formatLenderPosition();
 
   if (!address) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">Connect Your Wallet</h1>
-          <p className="text-gray-600 mb-8">Connect your wallet to start lending</p>
+      <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
+        <div className="card p-8 text-center max-w-md">
+          <h1 className="text-2xl font-bold mb-4">Connect Wallet</h1>
+          <p className="text-neutral-600 mb-8">Connect your wallet to start lending</p>
           <Wallet>
-            <ConnectWallet className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+            <ConnectWallet className="btn-primary">
               Connect Wallet
             </ConnectWallet>
           </Wallet>
@@ -81,24 +127,33 @@ export default function LendPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-neutral-50">
       {/* Header */}
-      <header className="bg-white shadow-sm">
+      <header className="bg-white border-b border-neutral-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <h1 className="text-xl font-semibold">Base Lending</h1>
+            <div className="flex items-center space-x-8">
+              <Link href="/" className="text-xl font-bold text-primary-600">
+                Base BNPL
+              </Link>
+              <nav className="hidden md:flex space-x-8">
+                <Link href="/borrow" className="text-neutral-600 hover:text-primary-600 font-medium transition-colors">
+                  Borrow
+                </Link>
+                <Link href="/lend" className="text-primary-600 font-medium">
+                  Lend
+                </Link>
+                <Link href="/dashboard" className="text-neutral-600 hover:text-primary-600 font-medium transition-colors">
+                  Dashboard
+                </Link>
+              </nav>
+            </div>
             <Wallet>
-              <ConnectWallet>
-                <Avatar className="h-6 w-6" />
+              <ConnectWallet className="btn-primary">
+                <Avatar className="h-4 w-4" />
                 <Name />
               </ConnectWallet>
               <WalletDropdown>
-                <div className="p-4 border-b">
-                  <Avatar />
-                  <Name />
-                  <Address />
-                  <EthBalance />
-                </div>
                 <WalletDropdownDisconnect />
               </WalletDropdown>
             </Wallet>
@@ -106,295 +161,296 @@ export default function LendPage() {
         </div>
       </header>
 
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        {/* Pool Statistics */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white p-6 rounded-lg shadow">
-            <div className="text-sm text-gray-600">Total Liquidity</div>
-            <div className="text-2xl font-bold text-green-600">
-              ${poolStats.totalLiquidity.toLocaleString()}
-            </div>
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        {/* Pool Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+          <div className="card p-6">
+            <h3 className="text-sm font-medium text-neutral-600">Total Liquidity</h3>
+            <p className="text-2xl font-bold text-neutral-900">
+              ${formattedStats ? formattedStats.totalLiquidity.toLocaleString() : '0'}
+            </p>
           </div>
-          <div className="bg-white p-6 rounded-lg shadow">
-            <div className="text-sm text-gray-600">Utilization Rate</div>
-            <div className="text-2xl font-bold text-blue-600">
-              {poolStats.utilizationRate}%
-            </div>
+          <div className="card p-6">
+            <h3 className="text-sm font-medium text-neutral-600">Total Loaned</h3>
+            <p className="text-2xl font-bold text-neutral-900">
+              ${formattedStats ? formattedStats.totalLoaned.toLocaleString() : '0'}
+            </p>
           </div>
-          <div className="bg-white p-6 rounded-lg shadow">
-            <div className="text-sm text-gray-600">Average APY</div>
-            <div className="text-2xl font-bold text-purple-600">
-              {poolStats.averageAPY}%
-            </div>
+          <div className="card p-6">
+            <h3 className="text-sm font-medium text-neutral-600">Utilization Rate</h3>
+            <p className="text-2xl font-bold text-neutral-900">
+              {formattedStats ? formattedStats.utilizationRate.toFixed(1) : '0'}%
+            </p>
           </div>
-          <div className="bg-white p-6 rounded-lg shadow">
-            <div className="text-sm text-gray-600">Total Lenders</div>
-            <div className="text-2xl font-bold text-indigo-600">
-              {poolStats.totalLenders}
-            </div>
+          <div className="card p-6">
+            <h3 className="text-sm font-medium text-neutral-600">Average APY</h3>
+            <p className="text-2xl font-bold text-success-600">
+              {formattedStats ? formattedStats.averageAPY.toFixed(2) : '0'}%
+            </p>
+          </div>
+          <div className="card p-6">
+            <h3 className="text-sm font-medium text-neutral-600">Total Lenders</h3>
+            <p className="text-2xl font-bold text-neutral-900">
+              {formattedStats ? formattedStats.totalLenders : '0'}
+            </p>
           </div>
         </div>
 
-        {/* Tab Navigation */}
-        <div className="bg-white rounded-lg shadow">
-          <div className="border-b">
-            <nav className="-mb-px flex">
-              <button
-                onClick={() => setActiveTab('deposit')}
-                className={`py-4 px-6 border-b-2 font-medium text-sm ${
-                  activeTab === 'deposit'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                Deposit Funds
-              </button>
-              <button
-                onClick={() => setActiveTab('portfolio')}
-                className={`py-4 px-6 border-b-2 font-medium text-sm ${
-                  activeTab === 'portfolio'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                My Portfolio
-              </button>
-            </nav>
-          </div>
+        {/* Tabs */}
+        <div className="flex space-x-1 mb-8">
+          <button
+            onClick={() => setActiveTab('deposit')}
+            className={`px-4 py-2 font-medium rounded-lg transition-colors ${
+              activeTab === 'deposit'
+                ? 'bg-primary-600 text-white'
+                : 'text-neutral-600 hover:text-primary-600'
+            }`}
+          >
+            Deposit
+          </button>
+          <button
+            onClick={() => setActiveTab('portfolio')}
+            className={`px-4 py-2 font-medium rounded-lg transition-colors ${
+              activeTab === 'portfolio'
+                ? 'bg-primary-600 text-white'
+                : 'text-neutral-600 hover:text-primary-600'
+            }`}
+          >
+            My Portfolio
+          </button>
+        </div>
 
-          {/* Deposit Tab */}
-          {activeTab === 'deposit' && (
-            <div className="p-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* Deposit Form */}
-                <div>
-                  <h2 className="text-xl font-semibold mb-6">Deposit USDC</h2>
-                  
-                  <div className="space-y-6">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Deposit Amount (USDC)
-                      </label>
-                      <input
-                        type="number"
-                        value={form.amount}
-                        onChange={(e) => setForm({...form, amount: e.target.value})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="1000"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Risk Preference
-                      </label>
-                      <select
-                        value={form.riskTier}
-                        onChange={(e) => setForm({...form, riskTier: e.target.value as 'LOW' | 'MEDIUM' | 'HIGH' | 'MIXED'})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value="LOW">Low Risk (4-6% APY)</option>
-                        <option value="MEDIUM">Medium Risk (8-12% APY)</option>
-                        <option value="HIGH">High Risk (15-25% APY)</option>
-                        <option value="MIXED">Mixed Portfolio (Auto-balanced)</option>
-                      </select>
-                    </div>
-
-                    <div className="bg-blue-50 p-4 rounded-lg">
-                      <h3 className="font-medium text-blue-900 mb-2">
-                        {riskTierInfo[form.riskTier].risk} Risk Profile
-                      </h3>
-                      <p className="text-sm text-blue-800 mb-2">
-                        Expected APY: {riskTierInfo[form.riskTier].apy}
-                      </p>
-                      <p className="text-sm text-blue-700">
-                        {riskTierInfo[form.riskTier].description}
-                      </p>
-                    </div>
-
-                    <div className="flex items-center">
-                      <input
-                        type="checkbox"
-                        checked={form.autoReinvest}
-                        onChange={(e) => setForm({...form, autoReinvest: e.target.checked})}
-                        className="mr-2"
-                      />
-                      <label className="text-sm text-gray-700">
-                        Auto-reinvest earnings
-                      </label>
-                    </div>
-
-                    {/* Need USDC? */}
-                    <div className="border-t pt-4">
-                      <p className="text-sm text-gray-600 mb-4">
-                        Need USDC? Buy with fiat:
-                      </p>
-                      <FundButton 
-                        text="Buy USDC"
-                        className="w-full mb-4"
-                      />
-                    </div>
-
-                    {/* Transaction Component */}
-                    <Transaction
-                      chainId={baseSepolia.id}
-                      calls={depositCalls()}
-                      isSponsored={true}
-                      onStatus={(status) => {
-                        console.log('Deposit status:', status);
-                      }}
-                      onSuccess={(receipt) => {
-                        console.log('Deposit successful:', receipt);
-                      }}
-                    >
-                      <TransactionButton 
-                        className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                        text="Deposit USDC"
-                      />
-                      <TransactionStatus>
-                        <TransactionStatusLabel />
-                      </TransactionStatus>
-                    </Transaction>
-                  </div>
+        {/* Deposit Tab */}
+        {activeTab === 'deposit' && step === 'input' && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2">
+              <div className="card p-8">
+                <h2 className="text-2xl font-bold text-neutral-900 mb-8">Deposit USDC</h2>
+                
+                {/* USDC Balance */}
+                <div className="bg-blue-50 border border-blue-200 p-4 rounded-xl mb-6">
+                  <h3 className="font-medium text-blue-900 mb-2">Available Balance</h3>
+                  <p className="text-2xl font-bold text-blue-700">
+                    {usdcBalance ? Number(formatUnits(usdcBalance, 6)).toFixed(2) : '0.00'} USDC
+                  </p>
                 </div>
 
-                {/* Risk Tier Breakdown */}
-                <div>
-                  <h3 className="text-lg font-semibold mb-4">Risk Tier Breakdown</h3>
-                  <div className="space-y-4">
-                    <div className="border rounded-lg p-4">
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="font-medium text-green-600">Low Risk</span>
-                        <span className="text-sm text-gray-600">4-6% APY</span>
-                      </div>
-                      <p className="text-sm text-gray-600 mb-2">
-                        Credit scores 750+, high collateral ratios
-                      </p>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div className="bg-green-600 h-2 rounded-full" style={{width: '60%'}}></div>
-                      </div>
-                      <div className="text-xs text-gray-500 mt-1">60% of pool</div>
-                    </div>
-
-                    <div className="border rounded-lg p-4">
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="font-medium text-yellow-600">Medium Risk</span>
-                        <span className="text-sm text-gray-600">8-12% APY</span>
-                      </div>
-                      <p className="text-sm text-gray-600 mb-2">
-                        Credit scores 600-749, standard collateral
-                      </p>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div className="bg-yellow-600 h-2 rounded-full" style={{width: '30%'}}></div>
-                      </div>
-                      <div className="text-xs text-gray-500 mt-1">30% of pool</div>
-                    </div>
-
-                    <div className="border rounded-lg p-4">
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="font-medium text-red-600">High Risk</span>
-                        <span className="text-sm text-gray-600">15-25% APY</span>
-                      </div>
-                      <p className="text-sm text-gray-600 mb-2">
-                        Credit scores 300-599, minimum collateral
-                      </p>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div className="bg-red-600 h-2 rounded-full" style={{width: '10%'}}></div>
-                      </div>
-                      <div className="text-xs text-gray-500 mt-1">10% of pool</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Portfolio Tab */}
-          {activeTab === 'portfolio' && (
-            <div className="p-6">
-              {/* Portfolio Overview */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                <div className="bg-blue-50 p-4 rounded-lg">
-                  <div className="text-sm text-blue-600">Total Deposited</div>
-                  <div className="text-xl font-bold text-blue-900">
-                    ${portfolioData.totalDeposited.toLocaleString()}
-                  </div>
-                </div>
-                <div className="bg-green-50 p-4 rounded-lg">
-                  <div className="text-sm text-green-600">Current Balance</div>
-                  <div className="text-xl font-bold text-green-900">
-                    ${portfolioData.currentBalance.toLocaleString()}
-                  </div>
-                </div>
-                <div className="bg-purple-50 p-4 rounded-lg">
-                  <div className="text-sm text-purple-600">Total Earned</div>
-                  <div className="text-xl font-bold text-purple-900">
-                    ${portfolioData.totalEarned.toLocaleString()}
-                  </div>
-                </div>
-                <div className="bg-indigo-50 p-4 rounded-lg">
-                  <div className="text-sm text-indigo-600">Average APY</div>
-                  <div className="text-xl font-bold text-indigo-900">
-                    {portfolioData.apy}%
-                  </div>
-                </div>
-              </div>
-
-              {/* Position Details */}
-              <div>
-                <h3 className="text-lg font-semibold mb-4">Position Details</h3>
-                <div className="space-y-4">
-                  {portfolioData.positions.map((position, index) => (
-                    <div key={index} className="border rounded-lg p-4">
-                      <div className="flex justify-between items-center mb-2">
-                        <span className={`font-medium ${
-                          position.tier === 'LOW' ? 'text-green-600' :
-                          position.tier === 'MEDIUM' ? 'text-yellow-600' : 'text-red-600'
-                        }`}>
-                          {position.tier} Risk
-                        </span>
-                        <span className="text-sm text-gray-600">{position.apy}% APY</span>
-                      </div>
-                      <div className="grid grid-cols-3 gap-4 text-sm">
-                        <div>
-                          <span className="text-gray-600">Deposited:</span>
-                          <div className="font-medium">${position.amount.toLocaleString()}</div>
-                        </div>
-                        <div>
-                          <span className="text-gray-600">Earned:</span>
-                          <div className="font-medium text-green-600">${position.earned}</div>
-                        </div>
-                        <div>
-                          <span className="text-gray-600">Current Value:</span>
-                          <div className="font-medium">${(position.amount + position.earned).toLocaleString()}</div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Withdraw Button */}
-                <div className="mt-6">
-                  <Transaction
-                    chainId={baseSepolia.id}
-                    calls={[]} // withdraw calls
-                    onStatus={(status) => {
-                      console.log('Withdraw status:', status);
-                    }}
-                  >
-                    <TransactionButton 
-                      className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
-                      text="Withdraw Funds"
+                <div className="space-y-6">
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-700 mb-2">
+                      Deposit Amount (USDC)
+                    </label>
+                    <input
+                      type="number"
+                      value={form.amount}
+                      onChange={(e) => setForm({...form, amount: e.target.value})}
+                      className="input"
+                      placeholder="1000.00"
                     />
-                    <TransactionStatus>
-                      <TransactionStatusLabel />
-                    </TransactionStatus>
-                  </Transaction>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-700 mb-2">
+                      Risk Tier
+                    </label>
+                    <select
+                      value={form.riskTier}
+                      onChange={(e) => setForm({...form, riskTier: parseInt(e.target.value) as 0 | 1 | 2})}
+                      className="input"
+                    >
+                      <option value={0}>LOW - 4% APY (Safest loans)</option>
+                      <option value={1}>MEDIUM - 8% APY (Balanced risk)</option>
+                      <option value={2}>HIGH - 15% APY (Higher risk)</option>
+                    </select>
+                  </div>
+
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={form.autoReinvest}
+                      onChange={(e) => setForm({...form, autoReinvest: e.target.checked})}
+                      className="mr-2"
+                    />
+                    <label className="text-sm text-neutral-600">
+                      Auto-reinvest yield
+                    </label>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setStep('approve')}
+                  disabled={!form.amount}
+                  className="btn-primary w-full py-3 mt-8 disabled:opacity-50"
+                >
+                  Continue to Approval
+                </button>
+              </div>
+            </div>
+
+            {/* Risk Tier Info */}
+            <div className="space-y-6">
+              <div className="card p-6">
+                <h3 className="font-semibold text-neutral-900 mb-4">Risk Tiers</h3>
+                <div className="space-y-4">
+                  <div className="border-l-4 border-success-500 pl-4">
+                    <h4 className="font-medium text-success-700">LOW Risk</h4>
+                    <p className="text-sm text-neutral-600">4% APY • Loans to borrowers with 750+ credit scores</p>
+                  </div>
+                  <div className="border-l-4 border-warning-500 pl-4">
+                    <h4 className="font-medium text-warning-700">MEDIUM Risk</h4>
+                    <p className="text-sm text-neutral-600">8% APY • Loans to borrowers with 600-749 credit scores</p>
+                  </div>
+                  <div className="border-l-4 border-error-500 pl-4">
+                    <h4 className="font-medium text-error-700">HIGH Risk</h4>
+                    <p className="text-sm text-neutral-600">15% APY • Loans to borrowers with 300-599 credit scores</p>
+                  </div>
                 </div>
               </div>
             </div>
-          )}
-        </div>
+          </div>
+        )}
+
+        {/* Approval Step */}
+        {activeTab === 'deposit' && step === 'approve' && (
+          <div className="max-w-2xl mx-auto">
+            <div className="card p-8">
+              <h2 className="text-2xl font-bold text-neutral-900 mb-8">Approve USDC</h2>
+              
+              <div className="bg-warning-50 border border-warning-200 p-4 rounded-xl mb-6">
+                <p className="text-sm text-warning-800">
+                  You&apos;re about to approve {form.amount} USDC for the LendingPool contract.
+                </p>
+              </div>
+
+              <div className="flex justify-between">
+                <button
+                  onClick={() => setStep('input')}
+                  className="btn-secondary px-6 py-3"
+                >
+                  Back
+                </button>
+                
+                <button
+                  onClick={handleApproval}
+                  disabled={isApprovePending || isApprovalConfirming}
+                  className="btn-primary px-6 py-3 disabled:opacity-50"
+                >
+                  {isApprovePending ? 'Confirming...' : isApprovalConfirming ? 'Waiting...' : 'Approve USDC'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Deposit Step */}
+        {activeTab === 'deposit' && step === 'deposit' && (
+          <div className="max-w-2xl mx-auto">
+            <div className="card p-8">
+              <h2 className="text-2xl font-bold text-neutral-900 mb-8">Deposit to Pool</h2>
+              
+              <div className="bg-success-50 border border-success-200 p-4 rounded-xl mb-6">
+                <p className="text-sm text-success-800">
+                  ✅ USDC approval successful! Now depositing {form.amount} USDC to {['LOW', 'MEDIUM', 'HIGH'][form.riskTier]} risk tier.
+                </p>
+              </div>
+
+              <div className="flex justify-between">
+                <button
+                  onClick={() => setStep('approve')}
+                  className="btn-secondary px-6 py-3"
+                >
+                  Back
+                </button>
+                
+                <button
+                  onClick={handleDeposit}
+                  disabled={isDepositPending || isDepositConfirming}
+                  className="btn-primary px-6 py-3 disabled:opacity-50"
+                >
+                  {isDepositPending ? 'Confirming...' : isDepositConfirming ? 'Waiting...' : 'Deposit USDC'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Success Step */}
+        {activeTab === 'deposit' && step === 'success' && (
+          <div className="max-w-2xl mx-auto">
+            <div className="card p-8 text-center">
+              <div className="w-16 h-16 bg-success-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                <span className="text-2xl font-bold text-white">✓</span>
+              </div>
+              <h2 className="text-2xl font-bold text-neutral-900 mb-4">Deposit Successful!</h2>
+              <p className="text-neutral-600 mb-4">
+                Successfully deposited {form.amount} USDC into the {['LOW', 'MEDIUM', 'HIGH'][form.riskTier]} risk tier.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <button
+                  onClick={() => {
+                    setStep('input');
+                    setForm({amount: '', riskTier: 0, autoReinvest: false});
+                  }}
+                  className="btn-primary px-6 py-3"
+                >
+                  Deposit More
+                </button>
+                <button
+                  onClick={() => setActiveTab('portfolio')}
+                  className="btn-secondary px-6 py-3"
+                >
+                  View Portfolio
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Portfolio Tab */}
+        {activeTab === 'portfolio' && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="card p-8">
+              <h2 className="text-2xl font-bold text-neutral-900 mb-6">My Position</h2>
+              
+              {position && position.deposited > 0 ? (
+                <div className="space-y-4">
+                  <div className="flex justify-between">
+                    <span className="text-neutral-600">Total Deposited:</span>
+                    <span className="font-semibold">${position.deposited.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-neutral-600">Yield Earned:</span>
+                    <span className="font-semibold text-success-600">${position.yieldEarned.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-neutral-600">Risk Tier:</span>
+                    <span className="font-semibold">{['LOW', 'MEDIUM', 'HIGH'][position.riskTier]}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-neutral-600">Auto-reinvest:</span>
+                    <span className="font-semibold">{position.autoReinvest ? 'Yes' : 'No'}</span>
+                  </div>
+                  
+                  <div className="pt-4 border-t">
+                    <button className="btn-primary w-full py-3">
+                      Claim Yield
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-neutral-600 mb-4">You haven&apos;t deposited any USDC yet.</p>
+                  <button
+                    onClick={() => setActiveTab('deposit')}
+                    className="btn-primary px-6 py-3"
+                  >
+                    Start Lending
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

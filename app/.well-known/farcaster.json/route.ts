@@ -33,5 +33,8 @@ function withValidProperties(properties: Record<string, undefined | string | str
         // use only while testing
         noindex: true,
       }),
+      baseBuilder: {
+        allowedAddresses: [process.env.BASEBUILDER_ALLOWED_ADDRESSES],
+      },
     });
   }

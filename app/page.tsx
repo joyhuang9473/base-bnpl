@@ -6,16 +6,18 @@ import { useAccount } from 'wagmi';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import { sdk } from '@farcaster/miniapp-sdk';
+import { useMiniKit } from '@coinbase/onchainkit/minikit';
 
 export default function HomePage() {
+  const { setFrameReady, isFrameReady } = useMiniKit();
   const { address } = useAccount();
   const router = useRouter();
 
   useEffect(() => {
-    // Call sdk.actions.ready() after your app is fully loaded and ready to display
-    sdk.actions.ready();
-  }, []);
+    if (!isFrameReady) {
+      setFrameReady();
+    }
+  }, [setFrameReady, isFrameReady]);
 
   return (
     <div className="min-h-screen bg-neutral-50">

@@ -43,6 +43,9 @@ export default async function RootLayout(props: { children: ReactNode }) {
 
   return (
     <html lang="en">
+      <head>
+        <meta name="fc:frame" content="vNext" />
+      </head>
       <body className={inter.className}>
         <Providers initialState={initialState}>
           {props.children}

@@ -35,7 +35,7 @@ export default function LendPage() {
     address: CONTRACT_ADDRESSES.USDC,
     abi: ERC20_ABI,
     functionName: 'balanceOf',
-    args: [address],
+    args: address ? [address] : undefined,
   });
 
   const { data: poolStats } = useReadContract({
@@ -48,7 +48,7 @@ export default function LendPage() {
     address: CONTRACT_ADDRESSES.LENDING_POOL,
     abi: LENDING_POOL_ABI,
     functionName: 'getLenderPosition',
-    args: [address],
+    args: address ? [address] : undefined,
   });
 
   const handleApproval = () => {

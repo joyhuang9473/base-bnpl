@@ -49,7 +49,7 @@ export default function BorrowPage() {
     address: CONTRACT_ADDRESSES.USDC,
     abi: ERC20_ABI,
     functionName: 'balanceOf',
-    args: [address],
+    args: address ? [address] : undefined,
   });
 
   // Check payment templates that are initialized in the contract
@@ -79,7 +79,7 @@ export default function BorrowPage() {
     address: CONTRACT_ADDRESSES.PAYMENT_CONTROLLER,
     abi: PAYMENT_CONTROLLER_ABI,
     functionName: 'merchants',
-    args: [address],
+    args: address ? [address] : undefined,
   });
 
   // Check admin role
@@ -107,7 +107,6 @@ export default function BorrowPage() {
       parseUnits(application.amount, 6),
       parseUnits((parseFloat(application.amount) * 1.5).toString(), application.collateralType === 'USDC' ? 6 : 18)
     ] : undefined,
-    enabled: shouldCallRiskAssessment
   });
 
   const handleApproval = () => {
@@ -139,7 +138,7 @@ export default function BorrowPage() {
         args: [
           address, // merchant address
           'BNPL User', // merchant name
-          BigInt(0) // settlement delay (0 for immediate) - ensure it's BigInt
+          BigInt(0) // settlement delay (0 for immediate)
         ]
       });
     } catch (error) {
@@ -545,10 +544,10 @@ export default function BorrowPage() {
             <div className="bg-blue-50 border border-blue-200 p-4 rounded-xl mb-6">
               <h3 className="font-medium text-blue-900 mb-2">Contract Status</h3>
               <div className="text-sm text-blue-800 space-y-2">
-                <div>Standard Template (4 payments): {standardTemplate?.[0] > 0 ? '✓ Available' : '✗ Not found'}</div>
-                <div>Extended 6 Template: {extended6Template?.[0] > 0 ? '✓ Available' : '✗ Not found'}</div>
-                <div>Extended 12 Template: {extended12Template?.[0] > 0 ? '✓ Available' : '✗ Not found'}</div>
-                <div>Merchant Active: {merchantData?.[4] ? '✓ Yes' : '✗ No'}</div>
+                <div>Standard Template (4 payments): {standardTemplate && standardTemplate[0] > 0 ? '✓ Available' : '✗ Not found'}</div>
+                <div>Extended 6 Template: {extended6Template && extended6Template[0] > 0 ? '✓ Available' : '✗ Not found'}</div>
+                <div>Extended 12 Template: {extended12Template && extended12Template[0] > 0 ? '✓ Available' : '✗ Not found'}</div>
+                <div>Merchant Active: {merchantData && merchantData[4] ? '✓ Yes' : '✗ No'}</div>
               </div>
             </div>
 

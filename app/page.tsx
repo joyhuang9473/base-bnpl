@@ -5,10 +5,19 @@ import { ConnectWallet, Wallet, WalletDropdown, WalletDropdownDisconnect } from 
 import { useAccount } from 'wagmi';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+import { useMiniKit } from '@coinbase/onchainkit/minikit';
 
 export default function HomePage() {
+  const { setFrameReady, isFrameReady } = useMiniKit();
   const { address } = useAccount();
   const router = useRouter();
+
+  useEffect(() => {
+    if (!isFrameReady) {
+      setFrameReady();
+    }
+  }, [setFrameReady, isFrameReady]);
 
   return (
     <div className="min-h-screen bg-neutral-50">

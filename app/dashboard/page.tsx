@@ -23,7 +23,7 @@ function LoanCard({ loanId }: { loanId: bigint }) {
   const { data: loanData } = useReadContract({
     address: CONTRACT_ADDRESSES.PAYMENT_CONTROLLER,
     abi: PAYMENT_CONTROLLER_ABI,
-    functionName: 'getLoan',
+    functionName: 'loans',
     args: [loanId],
   });
 
@@ -37,20 +37,36 @@ function LoanCard({ loanId }: { loanId: bigint }) {
     );
   }
 
-  const loan = loanData;
-  const statusText = LOAN_STATUS[Number(loan.status) as keyof typeof LOAN_STATUS] || 'UNKNOWN';
-  const riskTierText = ['LOW', 'MEDIUM', 'HIGH'][Number(loan.riskTier)] || 'UNKNOWN';
-  const isTokenUSDC = loan.collateralToken.toLowerCase() === CONTRACT_ADDRESSES.USDC.toLowerCase();
+  // Destructure the loan data tuple
+  const [
+    id,
+    borrower, // eslint-disable-line @typescript-eslint/no-unused-vars
+    merchant, // eslint-disable-line @typescript-eslint/no-unused-vars
+    principal,
+    totalAmount,
+    collateralAmount,
+    collateralToken,
+    status,
+    createdAt,
+    nextPaymentDue, // eslint-disable-line @typescript-eslint/no-unused-vars
+    paidAmount,
+    remainingAmount,
+    riskTier
+  ] = loanData;
+
+  const statusText = LOAN_STATUS[Number(status) as keyof typeof LOAN_STATUS] || 'UNKNOWN';
+  const riskTierText = ['LOW', 'MEDIUM', 'HIGH'][Number(riskTier)] || 'UNKNOWN';
+  const isTokenUSDC = collateralToken.toLowerCase() === CONTRACT_ADDRESSES.USDC.toLowerCase();
 
   return (
     <div className="card p-6">
       <div className="flex justify-between items-start mb-4">
         <div>
           <h4 className="text-lg font-semibold text-neutral-900 mb-1">
-            Loan #{Number(loan.id)}
+            Loan #{Number(id)}
           </h4>
           <p className="text-sm text-neutral-600">
-            Created {new Date(Number(loan.createdAt) * 1000).toLocaleDateString()}
+            Created {new Date(Number(createdAt) * 1000).toLocaleDateString()}
           </p>
         </div>
         <div className={`px-3 py-1 rounded-full text-xs font-medium ${
@@ -67,19 +83,19 @@ function LoanCard({ loanId }: { loanId: bigint }) {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
         <div>
           <p className="text-neutral-600">Principal</p>
-          <p className="font-semibold">${Number(formatUnits(loan.principal, 6)).toFixed(2)}</p>
+          <p className="font-semibold">${Number(formatUnits(principal, 6)).toFixed(2)}</p>
         </div>
         <div>
           <p className="text-neutral-600">Total Amount</p>
-          <p className="font-semibold">${Number(formatUnits(loan.totalAmount, 6)).toFixed(2)}</p>
+          <p className="font-semibold">${Number(formatUnits(totalAmount, 6)).toFixed(2)}</p>
         </div>
         <div>
           <p className="text-neutral-600">Paid</p>
-          <p className="font-semibold text-success-600">${Number(formatUnits(loan.paidAmount, 6)).toFixed(2)}</p>
+          <p className="font-semibold text-success-600">${Number(formatUnits(paidAmount, 6)).toFixed(2)}</p>
         </div>
         <div>
           <p className="text-neutral-600">Remaining</p>
-          <p className="font-semibold text-warning-600">${Number(formatUnits(loan.remainingAmount, 6)).toFixed(2)}</p>
+          <p className="font-semibold text-warning-600">${Number(formatUnits(remainingAmount, 6)).toFixed(2)}</p>
         </div>
       </div>
 
@@ -88,7 +104,7 @@ function LoanCard({ loanId }: { loanId: bigint }) {
           <div>
             <span className="text-neutral-600">Collateral: </span>
             <span className="font-medium">
-              {Number(formatUnits(loan.collateralAmount, isTokenUSDC ? 6 : 18)).toFixed(isTokenUSDC ? 2 : 4)} {isTokenUSDC ? 'USDC' : 'ETH'}
+              {Number(formatUnits(collateralAmount, isTokenUSDC ? 6 : 18)).toFixed(isTokenUSDC ? 2 : 4)} {isTokenUSDC ? 'USDC' : 'ETH'}
             </span>
             <span className={`ml-2 px-2 py-1 rounded text-xs ${
               riskTierText === 'LOW' ? 'bg-success-100 text-success-700' :
@@ -98,7 +114,7 @@ function LoanCard({ loanId }: { loanId: bigint }) {
               {riskTierText} RISK
             </span>
           </div>
-          {statusText === 'ACTIVE' && Number(loan.remainingAmount) > 0 && (
+          {statusText === 'ACTIVE' && Number(remainingAmount) > 0 && (
             <button className="btn-primary px-4 py-2">
               Make Payment
             </button>
@@ -129,21 +145,21 @@ export default function DashboardPage() {
     address: CONTRACT_ADDRESSES.LENDING_POOL,
     abi: LENDING_POOL_ABI,
     functionName: 'getLenderPosition',
-    args: [address],
+    args: address ? [address] : undefined,
   });
 
   const { data: borrowerLoans } = useReadContract({
     address: CONTRACT_ADDRESSES.PAYMENT_CONTROLLER,
     abi: PAYMENT_CONTROLLER_ABI,
-    functionName: 'getBorrowerLoans',
-    args: [address],
+    functionName: 'borrowerLoans',
+    args: address ? [address] : undefined,
   });
 
   const { data: usdcBalance } = useReadContract({
     address: CONTRACT_ADDRESSES.USDC,
     abi: ERC20_ABI,
     functionName: 'balanceOf',
-    args: [address],
+    args: address ? [address] : undefined,
   });
 
   const { writeContract: claimYield, isPending: isClaimPending } = useWriteContract();

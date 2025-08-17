@@ -151,8 +151,9 @@ export const PAYMENT_CONTROLLER_ABI = [
   },
   {
     "inputs": [
-      {"internalType": "string", "name": "businessName", "type": "string"},
-      {"internalType": "string", "name": "businessType", "type": "string"}
+      {"internalType": "address", "name": "merchant", "type": "address"},
+      {"internalType": "string", "name": "name", "type": "string"},
+      {"internalType": "uint256", "name": "settlementDelay", "type": "uint256"}
     ],
     "name": "registerMerchant",
     "outputs": [],

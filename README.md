@@ -64,13 +64,7 @@ The protocol consists of four main smart contracts working together:
 
 ### Installation
 
-1. **Clone the repository**
-```bash
-git clone https://github.com/your-org/base-bnpl.git
-cd base-bnpl
-```
-
-2. **Install dependencies**
+1. **Install dependencies**
 ```bash
 npm install
 ```

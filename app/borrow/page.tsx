@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import React from 'react';
-import { Avatar, Name } from '@coinbase/onchainkit/identity';
 import { ConnectWallet, Wallet, WalletDropdown, WalletDropdownDisconnect } from '@coinbase/onchainkit/wallet';
+import { FarcasterProfile } from '../../components/FarcasterProfile';
 import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi';
 import { parseUnits, formatUnits } from 'viem';
 import Link from 'next/link';
@@ -242,12 +242,12 @@ export default function BorrowPage() {
       {/* Header */}
       <header className="bg-white border-b border-neutral-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-8">
-              <Link href="/" className="text-xl font-bold text-primary-600">
+          <div className="flex justify-between items-center h-16 sm:h-20">
+            <div className="flex items-center space-x-6 lg:space-x-8">
+              <Link href="/" className="text-xl sm:text-2xl font-bold text-primary-600">
                 Base BNPL
               </Link>
-              <nav className="hidden md:flex space-x-8">
+              <nav className="hidden md:flex space-x-6 lg:space-x-8">
                 <Link href="/borrow" className="text-primary-600 font-medium">
                   Borrow
                 </Link>
@@ -260,9 +260,8 @@ export default function BorrowPage() {
               </nav>
             </div>
             <Wallet>
-              <ConnectWallet className="btn-primary">
-                <Avatar className="h-4 w-4" />
-                <Name />
+              <ConnectWallet className="btn-primary text-sm sm:text-base px-3 sm:px-4 py-2">
+                <FarcasterProfile avatarSize="h-4 w-4 sm:h-5 sm:w-5" />
               </ConnectWallet>
               <WalletDropdown>
                 <WalletDropdownDisconnect />
@@ -272,53 +271,53 @@ export default function BorrowPage() {
         </div>
       </header>
 
-      <div className="max-w-4xl mx-auto px-4 py-8">
+      <div className="max-w-4xl mx-auto px-4 py-6 sm:py-8">
         {/* Progress Steps */}
-        <div className="mb-8">
-          <div className="flex items-center justify-center space-x-4">
+        <div className="mb-6 sm:mb-8">
+          <div className="flex items-center justify-center space-x-2 sm:space-x-4">
             <div className={`flex items-center ${['form', 'assessment'].includes(step) ? 'text-primary-600' : 'text-neutral-400'}`}>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+              <div className={`w-6 sm:w-8 h-6 sm:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm font-medium ${
                 ['form', 'assessment'].includes(step) ? 'bg-primary-600 text-white' : 'bg-neutral-200'
               }`}>
                 1
               </div>
-              <span className="ml-2 font-medium">Application</span>
+              <span className="ml-1 sm:ml-2 text-sm sm:text-base font-medium">Application</span>
             </div>
-            <div className="w-8 h-px bg-neutral-200"></div>
+            <div className="w-4 sm:w-8 h-px bg-neutral-200"></div>
             <div className={`flex items-center ${step === 'approve' ? 'text-primary-600' : 'text-neutral-400'}`}>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+              <div className={`w-6 sm:w-8 h-6 sm:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm font-medium ${
                 step === 'approve' ? 'bg-primary-600 text-white' : 'bg-neutral-200'
               }`}>
                 2
               </div>
-              <span className="ml-2 font-medium">Approval</span>
+              <span className="ml-1 sm:ml-2 text-sm sm:text-base font-medium">Approval</span>
             </div>
-            <div className="w-8 h-px bg-neutral-200"></div>
+            <div className="w-4 sm:w-8 h-px bg-neutral-200"></div>
             <div className={`flex items-center ${step === 'create' ? 'text-primary-600' : 'text-neutral-400'}`}>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+              <div className={`w-6 sm:w-8 h-6 sm:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm font-medium ${
                 step === 'create' ? 'bg-primary-600 text-white' : 'bg-neutral-200'
               }`}>
                 3
               </div>
-              <span className="ml-2 font-medium">Create Loan</span>
+              <span className="ml-1 sm:ml-2 text-sm sm:text-base font-medium">Create Loan</span>
             </div>
           </div>
         </div>
 
         {/* Application Form */}
         {step === 'form' && (
-          <div className="card p-8">
-            <h2 className="text-2xl font-bold text-neutral-900 mb-8">Loan Application</h2>
+          <div className="card p-6 sm:p-8">
+            <h2 className="text-xl sm:text-2xl font-bold text-neutral-900 mb-6 sm:mb-8">Loan Application</h2>
             
             {/* USDC Balance Display */}
             <div className="bg-blue-50 border border-blue-200 p-4 rounded-xl mb-6">
               <h3 className="font-medium text-blue-900 mb-2">Your USDC Balance</h3>
-              <p className="text-2xl font-bold text-blue-700">
+              <p className="text-xl sm:text-2xl font-bold text-blue-700">
                 {usdcBalance ? Number(formatUnits(usdcBalance, 6)).toFixed(2) : '0.00'} USDC
               </p>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
               <div className="space-y-6">
                 <div>
                   <label className="block text-sm font-medium text-neutral-700 mb-2">
@@ -326,8 +325,15 @@ export default function BorrowPage() {
                   </label>
                   <input
                     type="number"
+                    min="0"
+                    step="0.01"
                     value={application.amount}
-                    onChange={(e) => setApplication({...application, amount: e.target.value})}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (value === '' || (parseFloat(value) >= 0)) {
+                        setApplication({...application, amount: value});
+                      }
+                    }}
                     className="input"
                     placeholder="1000"
                   />

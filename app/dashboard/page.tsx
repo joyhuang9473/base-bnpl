@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Avatar, Name } from '@coinbase/onchainkit/identity';
 import { ConnectWallet, Wallet, WalletDropdown, WalletDropdownDisconnect } from '@coinbase/onchainkit/wallet';
+import { FarcasterProfile } from '../../components/FarcasterProfile';
 import { useAccount, useReadContract, useWriteContract } from 'wagmi';
 import { formatUnits } from 'viem';
 import Link from 'next/link';
@@ -243,8 +243,7 @@ export default function DashboardPage() {
             </div>
             <Wallet>
               <ConnectWallet className="btn-primary">
-                <Avatar className="h-4 w-4" />
-                <Name />
+                <FarcasterProfile avatarSize="h-4 w-4" />
               </ConnectWallet>
               <WalletDropdown>
                 <WalletDropdownDisconnect />
@@ -254,46 +253,46 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="max-w-7xl mx-auto px-4 py-6 sm:py-8">
         {/* Welcome Section */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-neutral-900 mb-2">Dashboard</h1>
-          <p className="text-neutral-600">
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900 mb-2">Dashboard</h1>
+          <p className="text-sm sm:text-base text-neutral-600">
             Manage your loans, lending positions, and track protocol activity
           </p>
         </div>
 
         {/* Quick Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="card p-6">
-            <h3 className="text-sm font-medium text-neutral-600">USDC Balance</h3>
-            <p className="text-2xl font-bold text-neutral-900">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
+          <div className="card p-4 sm:p-6">
+            <h3 className="text-xs sm:text-sm font-medium text-neutral-600">USDC Balance</h3>
+            <p className="text-xl sm:text-2xl font-bold text-neutral-900">
               ${usdcBalance ? Number(formatUnits(usdcBalance, 6)).toFixed(2) : '0.00'}
             </p>
           </div>
-          <div className="card p-6">
-            <h3 className="text-sm font-medium text-neutral-600">Active Loans</h3>
-            <p className="text-2xl font-bold text-neutral-900">{totalLoans}</p>
+          <div className="card p-4 sm:p-6">
+            <h3 className="text-xs sm:text-sm font-medium text-neutral-600">Active Loans</h3>
+            <p className="text-xl sm:text-2xl font-bold text-neutral-900">{totalLoans}</p>
           </div>
-          <div className="card p-6">
-            <h3 className="text-sm font-medium text-neutral-600">Lending Position</h3>
-            <p className="text-2xl font-bold text-success-600">
+          <div className="card p-4 sm:p-6">
+            <h3 className="text-xs sm:text-sm font-medium text-neutral-600">Lending Position</h3>
+            <p className="text-xl sm:text-2xl font-bold text-success-600">
               ${position ? position.deposited.toFixed(2) : '0.00'}
             </p>
           </div>
-          <div className="card p-6">
-            <h3 className="text-sm font-medium text-neutral-600">Yield Earned</h3>
-            <p className="text-2xl font-bold text-success-600">
+          <div className="card p-4 sm:p-6">
+            <h3 className="text-xs sm:text-sm font-medium text-neutral-600">Yield Earned</h3>
+            <p className="text-xl sm:text-2xl font-bold text-success-600">
               ${position ? position.yieldEarned.toFixed(2) : '0.00'}
             </p>
           </div>
         </div>
 
         {/* Tabs */}
-        <div className="flex space-x-1 mb-8">
+        <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-1 mb-6 sm:mb-8">
           <button
             onClick={() => setActiveTab('overview')}
-            className={`px-4 py-2 font-medium rounded-lg transition-colors ${
+            className={`px-3 sm:px-4 py-2 text-sm sm:text-base font-medium rounded-lg transition-colors ${
               activeTab === 'overview'
                 ? 'bg-primary-600 text-white'
                 : 'text-neutral-600 hover:text-primary-600'
@@ -303,7 +302,7 @@ export default function DashboardPage() {
           </button>
           <button
             onClick={() => setActiveTab('loans')}
-            className={`px-4 py-2 font-medium rounded-lg transition-colors ${
+            className={`px-3 sm:px-4 py-2 text-sm sm:text-base font-medium rounded-lg transition-colors ${
               activeTab === 'loans'
                 ? 'bg-primary-600 text-white'
                 : 'text-neutral-600 hover:text-primary-600'
@@ -313,7 +312,7 @@ export default function DashboardPage() {
           </button>
           <button
             onClick={() => setActiveTab('lending')}
-            className={`px-4 py-2 font-medium rounded-lg transition-colors ${
+            className={`px-3 sm:px-4 py-2 text-sm sm:text-base font-medium rounded-lg transition-colors ${
               activeTab === 'lending'
                 ? 'bg-primary-600 text-white'
                 : 'text-neutral-600 hover:text-primary-600'

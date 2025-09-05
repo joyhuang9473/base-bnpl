@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Avatar, Name } from '@coinbase/onchainkit/identity';
 import { ConnectWallet, Wallet, WalletDropdown, WalletDropdownDisconnect } from '@coinbase/onchainkit/wallet';
+import { FarcasterProfile } from '../../components/FarcasterProfile';
 import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi';
 import { parseUnits, formatUnits } from 'viem';
 import Link from 'next/link';
@@ -131,12 +131,12 @@ export default function LendPage() {
       {/* Header */}
       <header className="bg-white border-b border-neutral-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-8">
-              <Link href="/" className="text-xl font-bold text-primary-600">
+          <div className="flex justify-between items-center h-16 sm:h-20">
+            <div className="flex items-center space-x-6 lg:space-x-8">
+              <Link href="/" className="text-xl sm:text-2xl font-bold text-primary-600">
                 Base BNPL
               </Link>
-              <nav className="hidden md:flex space-x-8">
+              <nav className="hidden md:flex space-x-6 lg:space-x-8">
                 <Link href="/borrow" className="text-neutral-600 hover:text-primary-600 font-medium transition-colors">
                   Borrow
                 </Link>
@@ -149,9 +149,8 @@ export default function LendPage() {
               </nav>
             </div>
             <Wallet>
-              <ConnectWallet className="btn-primary">
-                <Avatar className="h-4 w-4" />
-                <Name />
+              <ConnectWallet className="btn-primary text-sm sm:text-base px-3 sm:px-4 py-2">
+                <FarcasterProfile avatarSize="h-4 w-4 sm:h-5 sm:w-5" />
               </ConnectWallet>
               <WalletDropdown>
                 <WalletDropdownDisconnect />
@@ -242,8 +241,15 @@ export default function LendPage() {
                     </label>
                     <input
                       type="number"
+                      min="0"
+                      step="0.01"
                       value={form.amount}
-                      onChange={(e) => setForm({...form, amount: e.target.value})}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value === '' || (parseFloat(value) >= 0)) {
+                          setForm({...form, amount: value});
+                        }
+                      }}
                       className="input"
                       placeholder="1000.00"
                     />

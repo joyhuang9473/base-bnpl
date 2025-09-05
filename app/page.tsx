@@ -1,7 +1,7 @@
 'use client';
 
-import { Avatar, Name } from '@coinbase/onchainkit/identity';
 import { ConnectWallet, Wallet, WalletDropdown, WalletDropdownDisconnect } from '@coinbase/onchainkit/wallet';
+import { FarcasterProfile } from '../components/FarcasterProfile';
 import { useAccount } from 'wagmi';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -24,12 +24,12 @@ export default function HomePage() {
       {/* Header */}
       <header className="bg-white border-b border-neutral-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
+          <div className="flex justify-between items-center h-16 sm:h-20">
             <div className="flex items-center">
-              <h1 className="text-2xl font-bold text-primary-600">Base BNPL</h1>
+              <h1 className="text-xl sm:text-2xl font-bold text-primary-600">Base BNPL</h1>
             </div>
-            <div className="flex items-center space-x-6">
-              <nav className="hidden md:flex space-x-8">
+            <div className="flex items-center space-x-3 sm:space-x-6">
+              <nav className="hidden md:flex space-x-6 lg:space-x-8">
                 <Link href="/borrow" className="text-neutral-600 hover:text-primary-600 font-medium transition-colors">
                   Borrow
                 </Link>
@@ -41,9 +41,8 @@ export default function HomePage() {
                 </Link>
               </nav>
               <Wallet>
-                <ConnectWallet className="btn-primary">
-                  <Avatar className="h-4 w-4" />
-                  <Name />
+                <ConnectWallet className="btn-primary text-sm sm:text-base px-3 sm:px-4 py-2">
+                  <FarcasterProfile avatarSize="h-4 w-4 sm:h-5 sm:w-5" />
                 </ConnectWallet>
                 <WalletDropdown>
                   <WalletDropdownDisconnect />
@@ -55,35 +54,35 @@ export default function HomePage() {
       </header>
 
       {/* Hero Section */}
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-16">
         <div className="text-center">
-          <h1 className="text-5xl font-bold text-neutral-900 sm:text-6xl lg:text-7xl">
+          <h1 className="text-4xl font-bold text-neutral-900 sm:text-5xl md:text-6xl lg:text-7xl">
             <span className="block">Buy now,</span>
             <span className="block text-primary-600">pay later</span>
           </h1>
-          <p className="mt-6 max-w-2xl mx-auto text-xl text-neutral-600 leading-relaxed">
+          <p className="mt-4 sm:mt-6 max-w-2xl mx-auto text-lg sm:text-xl text-neutral-600 leading-relaxed px-2">
             The first decentralized BNPL platform on Base. Transparent, secure, and designed for the future of finance.
           </p>
           
           {address ? (
-            <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
+            <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center px-4">
               <button
                 onClick={() => router.push('/borrow')}
-                className="btn-primary px-8 py-4 text-lg"
+                className="btn-primary px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg w-full sm:w-auto"
               >
                 Start borrowing
               </button>
               <button
                 onClick={() => router.push('/lend')}
-                className="btn-secondary px-8 py-4 text-lg"
+                className="btn-secondary px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg w-full sm:w-auto"
               >
                 Start earning
               </button>
             </div>
           ) : (
-            <div className="mt-10">
+            <div className="mt-8 sm:mt-10 px-4">
               <Wallet>
-                <ConnectWallet className="btn-primary px-8 py-4 text-lg">
+                <ConnectWallet className="btn-primary px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg w-full sm:w-auto">
                   Connect wallet to get started
                 </ConnectWallet>
               </Wallet>
@@ -92,25 +91,25 @@ export default function HomePage() {
         </div>
 
         {/* Features */}
-        <div className="mt-24">
-          <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
-            <div className="card p-8">
-              <h3 className="text-xl font-semibold text-neutral-900 mb-4">Instant approvals</h3>
-              <p className="text-neutral-600 leading-relaxed">
+        <div className="mt-16 sm:mt-24">
+          <div className="grid grid-cols-1 gap-6 sm:gap-8 md:grid-cols-3">
+            <div className="card p-6 sm:p-8">
+              <h3 className="text-lg sm:text-xl font-semibold text-neutral-900 mb-3 sm:mb-4">Instant approvals</h3>
+              <p className="text-sm sm:text-base text-neutral-600 leading-relaxed">
                 Get approved in seconds with our on-chain credit scoring and automated risk assessment system.
               </p>
             </div>
 
-            <div className="card p-8">
-              <h3 className="text-xl font-semibold text-neutral-900 mb-4">Transparent terms</h3>
-              <p className="text-neutral-600 leading-relaxed">
+            <div className="card p-6 sm:p-8">
+              <h3 className="text-lg sm:text-xl font-semibold text-neutral-900 mb-3 sm:mb-4">Transparent terms</h3>
+              <p className="text-sm sm:text-base text-neutral-600 leading-relaxed">
                 All fees, rates, and terms are visible on-chain with complete transparency and no hidden charges.
               </p>
             </div>
 
-            <div className="card p-8">
-              <h3 className="text-xl font-semibold text-neutral-900 mb-4">Competitive yields</h3>
-              <p className="text-neutral-600 leading-relaxed">
+            <div className="card p-6 sm:p-8">
+              <h3 className="text-lg sm:text-xl font-semibold text-neutral-900 mb-3 sm:mb-4">Competitive yields</h3>
+              <p className="text-sm sm:text-base text-neutral-600 leading-relaxed">
                 Lenders earn attractive returns by providing liquidity to fund consumer purchases with built-in risk management.
               </p>
             </div>
